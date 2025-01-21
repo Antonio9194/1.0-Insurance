@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+
+<body>
+    <!-- Navbar with search form -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand ml-2" href="/">
+            <h1 class="h4">Gestione Assicurazioni</h1>
+        </a>
+        <!-- Search bar that searches for clients (displaying name and codice fiscale) and for license plates  -->
+        <div class="collapse navbar-collapse justify-content-end">
+            <form id="searchForm" onsubmit="return false;" class="form-inline">
+                <input type="text" class="form-control mr-2" name="client" placeholder="Cerca Cliente" id="clientInput">
+                <input type="text" class="form-control mr-2" name="licensePlate" placeholder="Cerca Targa"
+                    id="licensePlateInput">
+                <div id="resultsDropdown" class="dropdown-menu" style="display: none; width: 300px;">
+                    <ul id="resultsList" class="list-unstyled"></ul>
+                </div>
+            </form>
+        </div>
+    </nav>
+    
+    
+    <!-- Header -->
+    <div style="margin-top: 30px; margin-left: 20px;">
+        <h6 class="text-muted">Lista Polizze</h6>
+    </div>
+
+    <!-- Add Client Button -->
+    <a href="/addPolicies" class="btn btn-outline-dark bi bi-file-plus" 
+    style="margin-top: 30px; margin-left: 20px;"> Aggiungi Nuova Polizza</a>
+
+    <!--Go back button-->
+    <a href="javascript:history.back()" class="btn btn-outline-dark bi bi-arrow-left-circle" 
+    style="margin-top: 30px; margin-right: 39px; float: right;"> Indietro</a>
+
+        <!--Function to format date-->
+        <% 
+        function formatDate(dateString) {
+            const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-GB', options);
+        }
+        %>
+        <div class="table table-bordered table-striped table-hover table-responsive table-sm" style="margin-top: 30px;">
+        <!-- Table -->
+        <table style="font-size: 12px;" class="table table-bordered table-striped table-hover table-sm w-100">
+            <thead class="thead-light">
+                <tr>
+                    <th class="text-center" style="width: 5%;">N° Polizza</th>
+                    <th class="text-center">Cliente</th>
+                    <th class="text-center" style="width: 6%;">Tipo</th>
+                    <th class="text-center" style="width: 5%;">Targa</th>
+                    <th class="text-center">Data Inizio</th>
+                    <th class="text-center">Data Fine</th>
+                    <th class="text-center">Premio Annuo</th>
+                    <th class="text-center">Stato</th>
+                    <th class="text-center">Frequenza</th>
+                    <th class="text-center">Metodo</th>
+                    <th class="text-center">Debito</th>
+                    <th class="text-center">Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% policies.forEach(policy => { %>
+                    <tr>
+                        <td class="text-center"><%= policy.policy_number %></td>
+                        <td class="text-center"><%= policy.client_first_name %> <%= policy.client_last_name %></td>
+                        <td class="text-center" style="color: blue;"><%= policy.type %></td>
+                        <td class="text-center"><%= policy.license_plate %></td>
+                        <td class="text-center"><%= formatDate(policy.start_date) %></td>
+                        <td class="text-center"><%= formatDate(policy.end_date) %></td>
+                        <td class="text-center" style="color: green; font-weight: bold;"><%= policy.annual_premium %> €</td>
+                        <td class="text-center" style="font-weight: bold;"><%= policy.status %></td>
+                        <td class="text-center"><%= policy.payment_frequency %></td>
+                        <td class="text-center"><%= policy.payment_method %></td>
+                        <td class="text-center" style="color: red; font-weight: bold;"><%= policy.debt %> €</td>
+                        <td class="text-center" style="justify-content: center; display: flex; gap: 5px">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Actions" style="margin: 0; display: flex; flex-wrap: nowrap; gap: 0;">
+                                <a href="/editPolicies/<%= policy.id %>" class="btn bi bi-pencil btn-outline-primary btn-sm" style="margin: 0;"></a>
+                                <button onclick="showNotes(<%= policy.id %>)" class="btn bi bi-journal-text btn-outline-primary btn-sm" style="margin: 0;"></button>
+                                <a href="/specificClientInfo/<%= policy.client_id %>" class="btn bi bi-info-circle btn-outline-primary btn-sm" style="margin: 0;"></a>
+                                <form action="/deletePolicies/<%= policy.id %>" method="POST" onsubmit="return confirm('Are you sure you want to delete this policy?');" style="display:inline;">
+                                    <button type="submit" class="btn bi bi-trash btn-outline-danger btn-sm" style="margin: 0;"></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+        
+       
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        async function showNotes(policyId) {
+       try {
+           const response = await fetch(`/policyNotes/${policyId}`);
+           const notes = await response.text(); // Assuming notes are returned as plain text or HTML
+   
+           // Create a modal to display the notes
+           const modal = document.createElement('div');
+           modal.className = 'modal'; // Add your modal styles
+           modal.innerHTML = `
+               <div class="modal-content">
+                   <span class="close" onclick="this.parentElement.parentElement.remove();">&times;</span>
+                   <h2>Note</h2>
+                   <div>${notes}</div>
+               </div>
+           `;
+           document.body.appendChild(modal);
+       } catch (error) {
+           console.error("Error fetching policy notes:", error);
+       }
+   }
+       </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clientInput = document.getElementById('clientInput');
+            const licensePlateInput = document.getElementById('licensePlateInput');
+            const resultsDropdown = document.getElementById('resultsDropdown');
+            const resultsList = document.getElementById('resultsList');
+
+            // Function to fetch clients based on input
+            function fetchClients(query) {
+                fetch(`/searchClients?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsList.innerHTML = ''; // Clear previous results
+                        if (data.length > 0) {
+                            data.forEach(client => {
+                                const li = document.createElement('li');
+                                li.textContent = `${client.first_name} ${client.last_name} (${client.codice_fiscale})`;
+                                li.dataset.id = client.id; // Store client ID
+                                li.classList.add('dropdown-item');
+                                li.onclick = () => {
+                                    window.location.href = `/specificClientInfo/${client.id}`; // Redirect on click
+                                };
+                                resultsList.appendChild(li);
+                            });
+                            resultsDropdown.style.display = 'block'; // Show dropdown
+                        } else {
+                            resultsDropdown.style.display = 'none'; // Hide if no results
+                        }
+                    })
+                    .catch(error => console.error('Error fetching clients:', error));
+            }
+
+            // Function to fetch license plates based on input
+            function fetchLicensePlates(query) {
+                fetch(`/searchLicensePlate?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsList.innerHTML = ''; // Clear previous results
+                        if (data.length > 0) {
+                            data.forEach(plate => {
+                                const li = document.createElement('li');
+                                li.textContent = plate.license_plate; // Adjust according to your data structure
+                                li.dataset.id = plate.id; // Store plate ID
+                                li.classList.add('dropdown-item');
+                                li.onclick = () => {
+                                    window.location.href = `/specificPolicy/${plate.id}`; // Redirect to specificPolicy on click
+                                };
+                                resultsList.appendChild(li);
+                            });
+                            resultsDropdown.style.display = 'block'; // Show dropdown
+                        } else {
+                            resultsDropdown.style.display = 'none'; // Hide if no results
+                        }
+                    })
+                    .catch(error => console.error('Error fetching license plates:', error));
+            }
+
+            // Event listener for client input
+            clientInput.addEventListener('input', () => {
+                const query = clientInput.value.trim();
+                if (query) {
+                    fetchClients(query);
+                } else {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                }
+            });
+
+            // Event listener for license plate input
+            licensePlateInput.addEventListener('input', () => {
+                const query = licensePlateInput.value.trim();
+                if (query) {
+                    fetchLicensePlates(query);
+                } else {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                }
+            });
+
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('#searchForm')) {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if clicked outside
+                }
+            });
+        });
+    </script>
+</body>
+</html>
