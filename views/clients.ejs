@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+
+<body>
+  <!-- Navbar with search form -->
+  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand ml-2" href="/">
+        <h1 class="h4">Gestione Assicurazioni</h1>
+    </a>
+    <!-- Search bar that searches for clients (displaying name and codice fiscale) and for license plates  -->
+    <div class="collapse navbar-collapse justify-content-end">
+        <form id="searchForm" onsubmit="return false;" class="form-inline">
+            <input type="text" class="form-control mr-2" name="client" placeholder="Cerca Cliente" id="clientInput">
+            <input type="text" class="form-control mr-2" name="licensePlate" placeholder="Cerca Targa"
+                id="licensePlateInput">
+            <div id="resultsDropdown" class="dropdown-menu" style="display: none; width: 300px;">
+                <ul id="resultsList" class="list-unstyled"></ul>
+            </div>
+        </form>
+    </div>
+</nav>
+    
+    
+    <!-- Header -->
+    <div style="margin-top: 30px; margin-left: 20px;">
+        <h4>Lista Clienti</h4>
+        <h6 class="text-muted">Lista clienti registrati</h6>
+    </div>
+
+    <!-- Add Client Button -->
+    <a href="/addClient" class="btn btn-outline-dark bi bi-person-plus" 
+    style="margin-top: 30px; margin-left: 20px;"> Aggiungi Nuovo Cliente</a>
+
+    <!--Go back button-->
+    <a href="javascript:history.back()" class="btn btn-outline-dark bi bi-arrow-left-circle" 
+    style="margin-top: 30px; margin-right: 20px; float: right;"> Indietro</a>
+
+        <!--Function to format date-->
+        <% 
+        function formatDate(dateString) {
+            const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
+            return new Date(dateString).toLocaleDateString('en-GB', options);
+        }
+        %>
+        <div class="table table-bordered table-striped table-hover table-responsive table-sm" style="margin-top: 30px;">
+        <!-- Table -->
+        <table style="font-size: 12px;" class="table table-bordered table-striped table-hover table-sm w-100">
+            <thead class="thead-light">
+                <tr>
+                    <th class="text-center">Nome</th>
+                    <th class="text-center">Cognome</th>
+                    <th class="text-center">Data di Nascita</th>
+                    <th class="text-center">Indirizzo</th>
+                    <th class="text-center" style="width: 15%;">Email</th>
+                    <th class="text-center">Telefono</th>
+                    <th class="text-center">Codice Fiscale</th>
+                    <th class="text-center">Debito</th>
+                    <th class="text-center">Azioni</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% clients.forEach(client => { %>
+                    <tr>
+                        <td class="text-center"><%= client.first_name %></td>
+                        <td class="text-center"><%= client.last_name %></td>
+                        <td class="text-center"><%= formatDate(client.date_of_birth) %></td>
+                        <td class="text-center"><%= client.address %></td>
+                        <td class="text-center"><%= client.email %></td>
+                        <td class="text-center"><%= client.phone %></td>
+                        <td class="text-center"><%= client.codice_fiscale %></td>
+                        <td class="text-center" style="color: red; font-weight: bold;"><%= client.total_debt %> €</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm" role="group" aria-label="Actions" style="margin: 0; display: flex; gap: 0;">
+                                <a href="/editClient/<%= client.id %>" class="btn bi bi-pencil btn-outline-primary btn-sm" style="margin: 0;" 
+                                   data-toggle="tooltip" title="Modifica Cliente"></a>
+                                
+                                <button onclick="showNotes(<%= client.id %>)" class="btn bi bi-journal-text btn-outline-primary btn-sm" style="margin: 0;" 
+                                   data-toggle="tooltip" title="Note Cliente"></button>
+                                
+                                <a href="/specificClientPolicies/<%= client.id %>" class="btn bi bi-file-earmark-text btn-outline-primary btn-sm" style="margin: 0;" 
+                                   data-toggle="tooltip" title="Polizze Cliente"></a>
+                                
+                                <form action="/deleteClient/<%= client.id %>" method="POST" onsubmit="return confirm('Are you sure you want to delete this client?');" style="margin: 0;">
+                                    <button type="submit" class="btn bi bi-trash btn-outline-danger btn-sm" style="margin: 0;" 
+                                       data-toggle="tooltip" title="Elimina Cliente"></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                <% }) %>
+            </tbody>
+        </table>
+       
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        $(document).ready(function () {
+    $('[data-toggle="tooltip"]').tooltip();
+});
+
+    </script>  
+    <script>
+        async function showNotes(clientId) {
+    try {
+        const response = await fetch(`/clientNotes/${clientId}`);
+        const notes = await response.text(); // Assuming notes are returned as plain text or HTML
+
+        // Create a modal to display the notes
+        const modal = document.createElement('div');
+        modal.className = 'modal'; // Add your modal styles
+        modal.innerHTML = `
+            <div class="modal-content">
+                <span class="close" onclick="this.parentElement.parentElement.remove();">&times;</span>
+                <h2>Note</h2>
+                <div>${notes}</div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    } catch (error) {
+        console.error("Error fetching client notes:", error);
+    }
+}
+        </script>
+</body>
+</html>

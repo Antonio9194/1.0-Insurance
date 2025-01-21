@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/styles/main.css">
+</head>
+
+<!-- Navbar with search form -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand ml-2" href="/">
+        <h1 class="h4">Gestione Assicurazioni</h1>
+    </a>
+    <!-- Search bar that searches for clients (displaying name and codice fiscale) and for license plates  -->
+    <div class="collapse navbar-collapse justify-content-end">
+        <form id="searchForm" onsubmit="return false;" class="form-inline">
+            <input type="text" class="form-control mr-2" name="client" placeholder="Cerca Cliente" id="clientInput">
+            <input type="text" class="form-control mr-2" name="licensePlate" placeholder="Cerca Targa"
+                id="licensePlateInput">
+            <div id="resultsDropdown" class="dropdown-menu" style="display: none; width: 300px;">
+                <ul id="resultsList" class="list-unstyled"></ul>
+            </div>
+        </form>
+    </div>
+</nav>
+<!-- Header -->
+
+<body>
+    <div class="container mt-5">
+        <header style="margin-bottom: 20px;">
+            <h6 class="text-muted">Aggiungi Polizza</h6>
+        </header>
+
+        <!-- Form-->
+        <form action="/addPolicy" method="POST">
+            <input type="hidden" id="client_id" name="client_id" value=""> <!-- Hidden input for client ID -->
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="policy_number">N° Polizza:</label>
+                    <input type="text" class="form-control" id="policy_number" name="policy_number" required>
+                </div>
+                <!-- Clients form -->
+                <div class="form-group col-md-6">
+                    <label for="client-search">Cliente:</label>
+                    <input 
+                        type="text" 
+                        id="client-search" 
+                        class="form-control" 
+                        placeholder="Search for a client..." 
+                        autocomplete="off"
+                        oninput="searchClients(this.value)" <!-- Call a function to search for clients -->
+                    
+                    <select id="client-dropdown" class="form-control" size="5" style="display: none;" onchange="selectClient(this)">
+                        <!-- Options will be populated dynamically -->
+                    </select>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="type">Tipo:</label>
+                    <select class="form-control" id="type" name="type" required>
+                        <option value="RC">RC AUTO</option>
+                        <option value="FURTO">FURTO</option>
+                        <option value="INCENDIO">INCENDIO</option>
+                        <option value="INFORTUNI">INFORTUNI</option>
+                        <option value="ASSISTENZA STRADALE">ASSISTENZA STRADALE</option>
+                        <option value="KASKO">KASKO</option>
+                        <option value="CRISTALLI">CRISTALLI</option>
+                        <option value="FENOMENI ATMOSFERICI">FENOMENI ATMOSFERICI</option>
+                        <option value="GRANDINE">GRANDINE</option>
+                        <option value="TERREMOTI">TERREMOTI</option>
+                        <option value="EVENTI CATASTROFALI">EVENTI CATASTROFALI</option>
+                        <option value="RCP">RCP</option>
+                        <option value="IMPRESA">IMPRESA</option>
+                        <option value="SALUTE">SALUTE</option>
+                        <option value="VITA">VITA</option>
+                        <option value="MEDICO">MEDICO</option>
+                        <option value="PROFESSIONE">PROFESSIONE</option>
+                        <option value="CASA">CASA</option>
+                    </select>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="license_plate">Targa:</label>
+                    <input type="text" class="form-control" id="license_plate" name="license_plate" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="start_date">Data Inizio:</label>
+                    <input type="text" class="form-control" id="start_date" name="start_date" placeholder="gg/mm/aaaa" required>
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="end_date">Data Fine:</label>
+                    <input type="text" class="form-control" id="end_date" name="end_date" placeholder="gg/mm/aaaa" required>
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="annual_premium">Premio Annuo (€):</label>
+                    <input type="number" class="form-control" id="annual_premium" name="annual_premium" required
+                        step="0.01" placeholder="0.00">
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="debt">Debito (€):</label>
+                    <input type="number" class="form-control" id="debt" name="debt" required step="0.01"
+                        placeholder="0.00">
+                </div>
+            </div>
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="status">Stato:</label>
+                    <select class="form-control" id="status" name="status" required>
+                        <option value="Attiva">Attiva</option>
+                        <option value="Sospesa">Sospesa</option>
+                        <option value="Annullata">Annullata</option>
+                        <option value="Scaduta">Scaduta</option>
+                    </select>
+                </div>
+
+                <div class="form-group col-md-6">
+                    <label for="payment_frequency">Frequenza:</label>
+                    <select class="form-control" id="payment_frequency" name="payment_frequency" required>
+                        <option value="Mensile">Mensile</option>
+                        <option value="Trimestrale">Trimestrale</option>
+                        <option value="Semestrale">Semestrale</option>
+                        <option value="Annuale">Annuale</option>
+                    </select>
+                </div>
+                    <div class="form-group col-md-6">
+                        <label for="payment_method">Metodo di Pagamento:</label>
+                        <select class="form-control" id="payment_method" name="payment_method" required>
+                            <option value="Contanti">Contanti</option>
+                            <option value="POS">POS</option>
+                            <option value="Assegno">Assegno</option>
+                            <option value="Bonifico">Bonifico</option>
+                        </select>
+                    </div>
+                    <div class="form-group col-md-6">
+                        <label for="notes">Notes</label>
+                        <input type="text" class="form-control" id="notes" name="notes">
+                    </div>
+                </div>
+            <!-- Button Container -->
+            <div class="d-flex justify-content-start align-items-center" style="margin-top: 30px;">
+                <button type="submit" class="btn btn-outline-dark">Aggiungi Polizza</button>
+                <a href="javascript:history.back()" class="btn btn-secondary ml-4">Annulla</a>
+            </div>
+        </form>
+    </div>
+    <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clientInput = document.getElementById('clientInput');
+            const licensePlateInput = document.getElementById('licensePlateInput');
+            const resultsDropdown = document.getElementById('resultsDropdown');
+            const resultsList = document.getElementById('resultsList');
+
+            // Function to fetch clients based on input
+            function fetchClients(query) {
+                fetch(`/searchClients?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsList.innerHTML = ''; // Clear previous results
+                        if (data.length > 0) {
+                            data.forEach(client => {
+                                const li = document.createElement('li');
+                                li.textContent = `${client.first_name} ${client.last_name} (${client.codice_fiscale})`;
+                                li.dataset.id = client.id; // Store client ID
+                                li.classList.add('dropdown-item');
+                                li.onclick = () => {
+                                    window.location.href = `/specificClientInfo/${client.id}`; // Redirect on click
+                                };
+                                resultsList.appendChild(li);
+                            });
+                            resultsDropdown.style.display = 'block'; // Show dropdown
+                        } else {
+                            resultsDropdown.style.display = 'none'; // Hide if no results
+                        }
+                    })
+                    .catch(error => console.error('Error fetching clients:', error));
+            }
+
+            // Function to fetch license plates based on input
+            function fetchLicensePlates(query) {
+                fetch(`/searchLicensePlate?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsList.innerHTML = ''; // Clear previous results
+                        if (data.length > 0) {
+                            data.forEach(plate => {
+                                const li = document.createElement('li');
+                                li.textContent = plate.license_plate; // Adjust according to your data structure
+                                li.dataset.id = plate.id; // Store plate ID
+                                li.classList.add('dropdown-item');
+                                li.onclick = () => {
+                                    window.location.href = `/specificPolicy/${plate.id}`; // Redirect to specificPolicy on click
+                                };
+                                resultsList.appendChild(li);
+                            });
+                            resultsDropdown.style.display = 'block'; // Show dropdown
+                        } else {
+                            resultsDropdown.style.display = 'none'; // Hide if no results
+                        }
+                    })
+                    .catch(error => console.error('Error fetching license plates:', error));
+            }
+
+            // Event listener for client input
+            clientInput.addEventListener('input', () => {
+                const query = clientInput.value.trim();
+                if (query) {
+                    fetchClients(query);
+                } else {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                }
+            });
+
+            // Event listener for license plate input
+            licensePlateInput.addEventListener('input', () => {
+                const query = licensePlateInput.value.trim();
+                if (query) {
+                    fetchLicensePlates(query);
+                } else {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                }
+            });
+
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('#searchForm')) {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if clicked outside
+                }
+            });
+        });
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clientSearch = document.getElementById('client-search');
+            const clientDropdown = document.getElementById('client-dropdown');
+
+            clientSearch.addEventListener('input', () => {
+                const query = clientSearch.value.trim();
+
+                if (!query) {
+                    clientDropdown.style.display = 'none';
+                    clientDropdown.innerHTML = '';
+                    return;
+                }
+
+                fetch(`/searchClients?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Client search results:", data); // Log the data to check its structure
+                        clientDropdown.innerHTML = ''; // Clear previous results
+
+                        if (data.length === 0) {
+                            clientDropdown.style.display = 'none';
+                            return;
+                        }
+
+                        data.forEach(client => {
+                            const option = document.createElement('option');
+                            option.value = client.id; // Set the value to the client's ID
+                            option.textContent = `${client.first_name} ${client.last_name} (${client.codice_fiscale})`; // Ensure these properties exist
+                            clientDropdown.appendChild(option);
+                        });
+
+                        clientDropdown.style.display = 'block'; // Show the dropdown
+                    })
+                    .catch(error => console.error('Error fetching clients:', error));
+            });
+
+            clientDropdown.addEventListener('change', () => {
+                const selectedOption = clientDropdown.options[clientDropdown.selectedIndex];
+                clientSearch.value = selectedOption.textContent; // Display the selected client's name
+                document.getElementById('client_id').value = selectedOption.value; // Set the hidden input value
+                clientDropdown.style.display = 'none'; // Hide the dropdown
+            });
+        });
+    </script>
+</body>
+
+</html>

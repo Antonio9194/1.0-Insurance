@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="it">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.5.0/font/bootstrap-icons.css">
+    <link rel="stylesheet" href="/styles/main.css">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+</head>
+
+<body>
+    <!-- Navbar with search form -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <a class="navbar-brand ml-2" href="/">
+            <h1 class="h4">Gestione Assicurazioni</h1>
+        </a>
+        <!-- Search bar that searches for clients (displaying name and codice fiscale) and for license plates  -->
+        <div class="collapse navbar-collapse justify-content-end">
+            <form id="searchForm" onsubmit="return false;" class="form-inline">
+                <input type="text" class="form-control mr-2" name="client" placeholder="Cerca Cliente" id="clientInput">
+                <input type="text" class="form-control mr-2" name="licensePlate" placeholder="Cerca Targa"
+                    id="licensePlateInput">
+                <div id="resultsDropdown" class="dropdown-menu" style="display: none; width: 300px;">
+                    <ul id="resultsList" class="list-unstyled"></ul>
+                </div>
+            </form>
+        </div>
+    </nav>
+
+    <!-- Header -->
+    <header style="margin-top: 30px; margin-left: 20px;">
+        <h4>Benvenuto nel Sistema di Gestione Assicurazioni!</h4>
+        <h6 class="text-muted">Panoramica del sistema e attività recenti</h6>
+    </header>
+
+    <!-- Main content -->
+    <main>
+        <!-- Information cards -->
+        <div class="row justify-content-left" style="margin-top: 30px; margin-left: 4px;">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title d-inline bi bi-person-badge"> </h5>
+                        <h5 class="d-inline">Clienti</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <%= clients.length %>
+                        </p>
+                        <a href="/clients" class="btn btn-outline-dark">Lista Clienti</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" style="margin-right: 20px;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title d-inline bi bi-file-earmark-text"> </h5>
+                        <h5 class="d-inline">Polizze</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <%= policies.length %>
+                        </p>
+                        <a href="/policies" class="btn btn-outline-dark">Lista Polizze</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" style="margin-right: 20px;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title d-inline bi bi-calendar-check"> </h5>
+                        <h5 class="d-inline">Polizze del Giorno</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <%= todayPolicies.length %>
+                        </p>
+                        <a href="/dailyPolicies" class="btn btn-outline-dark">Lista Polizze del Giorno</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions-->
+        <div class="row justify-content-start" style="margin-top: 30px; margin-left: 20px;">
+            <h5>Azioni Rapide</h5>
+        </div>
+        <div class="row justify-content-start" style="margin-top: 30px; margin-left: 4px;">
+            <div class="col-md-2">
+                <a href="/addClient" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="bi bi-person-plus"></i> Nuovo Cliente
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="/addPolicies" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="bi bi-file-earmark-plus"></i> Nuova Polizza
+                </a>
+            </div>
+            <div class="col-md-2">
+                <a href="/debiti" class="btn btn-outline-dark btn-block mb-2">
+                    <i class="bi bi-clipboard"></i> Debiti
+                </a>
+            </div>
+        </div>
+
+        <!-- Report Giornaliero-->
+        <div class="row justify-content-left" style="margin-top: 30px; margin-left: 4px;">
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title d-inline bi bi-cash" style="color: green;"></h5>
+                        <h5 class="d-inline">Incasso</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <%= dailyAnnualPremium %> €
+                        </p>
+                        <h6 class="text-muted">Incasso Giornaliero</h6>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3" style="margin-right: 20px;">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title d-inline bi bi-exclamation-circle" style="color: red;"></h5>
+                        <h5 class="d-inline">Debito</h5>
+                    </div>
+                    <div class="card-body">
+                        <p class="card-text">
+                            <%= dailyDebt %> €
+                        </p>
+                        <h6 class="text-muted"> Debito Giornaliero</h6>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+    <footer style="margin-top: 30px; margin-left: 20px;">
+        <p>&copy; <%- new Date().getFullYear() %> Sistema di Gestione Assicurazioni</p>
+    </footer>
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        document.getElementById("annualPremium").textContent = formattedAnnualPremium;
+        document.getElementById("debt").textContent = formattedDebt;
+        document.getElementById("net").textContent = formattedNet;
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clientInput = document.getElementById('clientInput');
+            const licensePlateInput = document.getElementById('licensePlateInput');
+            const resultsDropdown = document.getElementById('resultsDropdown');
+            const resultsList = document.getElementById('resultsList');
+
+            // Function to fetch clients based on input
+            function fetchClients(query) {
+                fetch(`/searchClients?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsList.innerHTML = ''; // Clear previous results
+                        if (data.length > 0) {
+                            data.forEach(client => {
+                                const li = document.createElement('li');
+                                li.textContent = `${client.first_name} ${client.last_name} (${client.codice_fiscale})`;
+                                li.dataset.id = client.id; // Store client ID
+                                li.classList.add('dropdown-item');
+                                li.onclick = () => {
+                                    window.location.href = `/specificClientInfo/${client.id}`; // Redirect on click
+                                };
+                                resultsList.appendChild(li);
+                            });
+                            resultsDropdown.style.display = 'block'; // Show dropdown
+                        } else {
+                            resultsDropdown.style.display = 'none'; // Hide if no results
+                        }
+                    })
+                    .catch(error => console.error('Error fetching clients:', error));
+            }
+
+            // Function to fetch license plates based on input
+            function fetchLicensePlates(query) {
+                fetch(`/searchLicensePlate?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        resultsList.innerHTML = ''; // Clear previous results
+                        if (data.length > 0) {
+                            data.forEach(plate => {
+                                const li = document.createElement('li');
+                                li.textContent = plate.license_plate; // Adjust according to your data structure
+                                li.dataset.id = plate.id; // Store plate ID
+                                li.classList.add('dropdown-item');
+                                li.onclick = () => {
+                                    window.location.href = `/specificPolicy/${plate.id}`; // Redirect to specificPolicy on click
+                                };
+                                resultsList.appendChild(li);
+                            });
+                            resultsDropdown.style.display = 'block'; // Show dropdown
+                        } else {
+                            resultsDropdown.style.display = 'none'; // Hide if no results
+                        }
+                    })
+                    .catch(error => console.error('Error fetching license plates:', error));
+            }
+
+            // Event listener for client input
+            clientInput.addEventListener('input', () => {
+                const query = clientInput.value.trim();
+                if (query) {
+                    fetchClients(query);
+                } else {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                }
+            });
+
+            // Event listener for license plate input
+            licensePlateInput.addEventListener('input', () => {
+                const query = licensePlateInput.value.trim();
+                if (query) {
+                    fetchLicensePlates(query);
+                } else {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                }
+            });
+
+            // Hide dropdown when clicking outside
+            document.addEventListener('click', (event) => {
+                if (!event.target.closest('#searchForm')) {
+                    resultsDropdown.style.display = 'none'; // Hide dropdown if clicked outside
+                }
+            });
+        });
+    </script>
+</body>
+
+</html>
