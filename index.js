@@ -6,10 +6,14 @@ import morgan from 'morgan';
 import cookieParser from 'cookie-parser';
 import path from 'path';
 import multer from 'multer';
+import nodemailer from 'nodemailer';
+import moment from 'moment';  // Import moment.js to work with dates
+import { sendEmail } from './emailUtils.js';
 import pg from 'pg';
 const { Pool } = pg;
 import dotenv from 'dotenv';
 dotenv.config();
+import cron from 'node-cron';
 
 
 // Creating an instance of Express
@@ -41,6 +45,7 @@ app.use(express.static(path.join(process.cwd(), 'public')));
 // Set the view engine to EJS
 app.set('view engine', 'ejs');
 app.set('views', path.join(process.cwd(), 'views'));
+  
 
 // Set storage engine
 const storage = multer.diskStorage({
@@ -74,6 +79,105 @@ function checkFileType(file, cb) {
         cb('Error: Images and PDFs only!');
     }
 }
+
+// Schedule the reminder emails to run every day at midnight
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running daily reminder email task...');
+    await sendReminderEmails();
+  });
+  
+  // Function that contains the logic for sending emails
+  async function sendReminderEmails() {
+    try {
+      const result = await pool.query(`
+          SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
+          FROM policy 
+          LEFT JOIN client ON policy.client_id = client.id
+          WHERE end_date <= CURRENT_DATE + INTERVAL '14 days'
+          AND end_date > CURRENT_DATE
+      `);
+  
+      if (result.rows.length === 0) {
+        console.log('No policies expiring in the next two weeks.');
+        return;
+      }
+  
+      for (const policy of result.rows) {
+        const clientEmail = policy.client_email; // Ensure this column exists in your database
+  
+        const formattedDate = new Date(policy.end_date).toLocaleDateString('it-IT');
+        const subject = `Scadenza Polizza`;
+        const message = `
+          Gentile ${policy.client_first_name} ${policy.client_last_name},
+  
+          Ci teniamo a ricordarle che la sua polizza ${policy.policy_number}, 
+          targata ${policy.license_plate}, è in scadenza giorno ${formattedDate}.
+          La invitiamo a recarsi in assicurazione entro la data indicata.
+  
+          Cordiali saluti
+          Vinciguerra&Barbagallo SNC
+        `;
+  
+        // Call your sendEmail function
+        await sendEmail(clientEmail, subject, message);
+      }
+  
+      console.log('Reminder emails sent successfully!');
+    } catch (error) {
+      console.error('Error sending reminder emails:', error);
+    }
+  }
+
+// Route to send reminder emails
+app.get('/send-reminders', async (req, res) => {
+    try {
+    const result = await pool.query(`
+        SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name, client.email AS client_email 
+                FROM policy 
+                LEFT JOIN client ON policy.client_id = client.id
+                WHERE end_date <= CURRENT_DATE + INTERVAL '14 days'
+                AND end_date > CURRENT_DATE
+    `);
+  
+      // If no policies are expiring, send a response and stop the process
+      if (result.rows.length === 0) {
+        return res.status(200).send('No policies expiring in the next two weeks.');
+      }
+  
+      // Step 3: Loop through the policies and send an email to each client
+      for (const policy of result.rows) {
+        const clientName = `${policy.client_first_name} ${policy.client_last_name}`;  
+        const clientEmail = policy.client_email;  
+        const expirationDate = policy.end_date;  
+  
+        // Format the expiration date for email
+        const formattedDate = new Date(expirationDate).toLocaleDateString('it-IT');
+  
+        // Create the subject and message
+        const subject = `Scadenza Polizza`;
+        const message = `
+          Gentile ${clientName},
+  
+          Ci teniamo a ricordarle che la sua polizza ${policy.policy_number}, 
+          targata ${policy.license_plate}, è in scadenza giorno ${formattedDate}.
+          La invitiamo a recarsi in assicurazione entro la data indicata.
+  
+          Cordiali saluti
+          Vinciguerra & Barbagallo SNC
+        `;
+  
+        // Step 4: Send the email
+        await sendEmail(clientEmail, subject, message);
+      }
+  
+      console.log('Reminder emails sent successfully!');
+      // Send a success response after emails are sent
+      res.status(200).send('Reminder emails sent successfully!');
+    } catch (error) {
+      console.error('Error sending reminder emails:', error);
+      res.status(500).send('Error sending reminder emails.');
+    }
+  });
 
 // File upload route
 app.post('/uploadFile/:id', (req, res) => {
