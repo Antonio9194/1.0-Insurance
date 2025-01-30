@@ -81,20 +81,21 @@ function checkFileType(file, cb) {
 }
 
 // Schedule the reminder emails to run every day at midnight
-cron.schedule('0 0 * * *', async () => {
-    console.log('Running daily reminder email task...');
+cron.schedule('00 5 * * *', async () => {
+    console.log('Running daily reminder email task at 8:18 AM...');
     await sendReminderEmails();
   });
   
-  // Function that contains the logic for sending emails
-  async function sendReminderEmails() {
+  
+// Function that contains the logic for sending emails
+async function sendReminderEmails() {
     try {
       const result = await pool.query(`
-          SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-          FROM policy 
-          LEFT JOIN client ON policy.client_id = client.id
-          WHERE end_date <= CURRENT_DATE + INTERVAL '14 days'
-          AND end_date > CURRENT_DATE
+        SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name , client.email AS client_email
+        FROM policy 
+        LEFT JOIN client ON policy.client_id = client.id
+        WHERE end_date <= CURRENT_DATE + INTERVAL '14 days'
+        AND end_date > CURRENT_DATE
       `);
   
       if (result.rows.length === 0) {
@@ -103,6 +104,12 @@ cron.schedule('0 0 * * *', async () => {
       }
   
       for (const policy of result.rows) {
+        // Check if the reminder has already been sent
+        if (policy.reminder_sent) {
+          console.log(`Reminder already sent for policy ${policy.policy_number}`);
+          continue; // Skip this policy if reminder was already sent
+        }
+  
         const clientEmail = policy.client_email; // Ensure this column exists in your database
   
         const formattedDate = new Date(policy.end_date).toLocaleDateString('it-IT');
@@ -114,12 +121,27 @@ cron.schedule('0 0 * * *', async () => {
           targata ${policy.license_plate}, è in scadenza giorno ${formattedDate}.
           La invitiamo a recarsi in assicurazione entro la data indicata.
   
+          Questa è una comunicazione automatica, si prega di non rispondere a questo messaggio.
+  
           Cordiali saluti
-          Vinciguerra&Barbagallo SNC
+          Vinciguerra & Barbagallo SNC Assicurazioni
+  
+          Via Concetto Marchesi, 7b, 95125 Catania CT, Italia
+          Orari: Lunedì - Venerdì: 9:00 - 13:00, 15:30 - 18:30
+          Telefono: +39 095 749 6781
         `;
   
-        // Call your sendEmail function
+        // Send the email
         await sendEmail(clientEmail, subject, message);
+  
+        // Update the policy to mark the reminder as sent
+        await pool.query(`
+          UPDATE policy
+          SET reminder_sent = TRUE
+          WHERE id = $1
+        `, [policy.id]);
+  
+        console.log(`Reminder sent for policy ${policy.policy_number}`);
       }
   
       console.log('Reminder emails sent successfully!');
@@ -127,6 +149,7 @@ cron.schedule('0 0 * * *', async () => {
       console.error('Error sending reminder emails:', error);
     }
   }
+  
 
 // Route to send reminder emails
 app.get('/send-reminders', async (req, res) => {
@@ -161,9 +184,16 @@ app.get('/send-reminders', async (req, res) => {
           Ci teniamo a ricordarle che la sua polizza ${policy.policy_number}, 
           targata ${policy.license_plate}, è in scadenza giorno ${formattedDate}.
           La invitiamo a recarsi in assicurazione entro la data indicata.
+
+          Questa è una comunicazione automatica, si prega di non rispondere a questo messaggio.
   
           Cordiali saluti
-          Vinciguerra & Barbagallo SNC
+          Vinciguerra & Barbagallo SNC Assicurazioni
+
+          Via Concetto Marchesi, 7b, 95125 Catania CT, Italia
+          Orari: Lunedì - Venerdì: 9:00 - 13:00, 15:30 - 18:30
+          Telefono: +39 095 749 6781
+
         `;
   
         // Step 4: Send the email
