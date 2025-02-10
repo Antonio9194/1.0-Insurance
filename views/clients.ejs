@@ -11,8 +11,8 @@
 </head>
 
 <body>
-  <!-- Navbar with search form -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+   <!-- Navbar with search form -->
+   <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
     <a class="navbar-brand ml-2" href="/">
         <h1 class="h4">Gestione Assicurazioni</h1>
     </a>
@@ -28,7 +28,6 @@
         </form>
     </div>
 </nav>
-    
     
     <!-- Header -->
     <div style="margin-top: 30px; margin-left: 20px;">
@@ -108,8 +107,9 @@
         $(document).ready(function () {
     $('[data-toggle="tooltip"]').tooltip();
 });
-
     </script>  
+
+    
     <script>
         async function showNotes(clientId) {
     try {
@@ -131,6 +131,91 @@
         console.error("Error fetching client notes:", error);
     }
 }
+        </script>
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                const clientInput = document.getElementById('clientInput');
+                const licensePlateInput = document.getElementById('licensePlateInput');
+                const resultsDropdown = document.getElementById('resultsDropdown');
+                const resultsList = document.getElementById('resultsList');
+    
+                // Function to fetch clients based on input
+                function fetchClients(query) {
+                    fetch(`/searchClients?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            resultsList.innerHTML = ''; // Clear previous results
+                            if (data.length > 0) {
+                                data.forEach(client => {
+                                    const li = document.createElement('li');
+                                    li.textContent = `${client.first_name} ${client.last_name} (${client.codice_fiscale})`;
+                                    li.dataset.id = client.id; // Store client ID
+                                    li.classList.add('dropdown-item');
+                                    li.onclick = () => {
+                                        window.location.href = `/specificClientInfo/${client.id}`; // Redirect on click
+                                    };
+                                    resultsList.appendChild(li);
+                                });
+                                resultsDropdown.style.display = 'block'; // Show dropdown
+                            } else {
+                                resultsDropdown.style.display = 'none'; // Hide if no results
+                            }
+                        })
+                        .catch(error => console.error('Error fetching clients:', error));
+                }
+    
+                // Function to fetch license plates based on input
+                function fetchLicensePlates(query) {
+                    fetch(`/searchLicensePlate?q=${encodeURIComponent(query)}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            resultsList.innerHTML = ''; // Clear previous results
+                            if (data.length > 0) {
+                                data.forEach(plate => {
+                                    const li = document.createElement('li');
+                                    li.textContent = plate.license_plate; // Adjust according to your data structure
+                                    li.dataset.id = plate.id; // Store plate ID
+                                    li.classList.add('dropdown-item');
+                                    li.onclick = () => {
+                                        window.location.href = `/specificPolicy/${plate.id}`; // Redirect to specificPolicy on click
+                                    };
+                                    resultsList.appendChild(li);
+                                });
+                                resultsDropdown.style.display = 'block'; // Show dropdown
+                            } else {
+                                resultsDropdown.style.display = 'none'; // Hide if no results
+                            }
+                        })
+                        .catch(error => console.error('Error fetching license plates:', error));
+                }
+    
+                // Event listener for client input
+                clientInput.addEventListener('input', () => {
+                    const query = clientInput.value.trim();
+                    if (query) {
+                        fetchClients(query);
+                    } else {
+                        resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                    }
+                });
+    
+                // Event listener for license plate input
+                licensePlateInput.addEventListener('input', () => {
+                    const query = licensePlateInput.value.trim();
+                    if (query) {
+                        fetchLicensePlates(query);
+                    } else {
+                        resultsDropdown.style.display = 'none'; // Hide dropdown if input is empty
+                    }
+                });
+    
+                // Hide dropdown when clicking outside
+                document.addEventListener('click', (event) => {
+                    if (!event.target.closest('#searchForm')) {
+                        resultsDropdown.style.display = 'none'; // Hide dropdown if clicked outside
+                    }
+                });
+            });
         </script>
 </body>
 </html>
