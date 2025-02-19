@@ -1005,10 +1005,11 @@ function formatDate(dateString) {
 }
 
 // Start the server
-const PORT = process.env.PORT || 3000;
+const PORT = process.env.PORT || 8081; // You can change this to 80, but Elastic Beanstalk typically uses dynamic ports
 app.listen(PORT, () => {
-    console.log(`Server is running on http://localhost:${PORT}`);
+  console.log(`Server is running on port ${PORT}`);
 });
+
 
 // Export the app for use in other files
 export default app;
