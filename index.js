@@ -25,13 +25,16 @@ const clientTwilio = new twilio(
 const app = express();
 
 // PostgreSQL pool definition to manage database connections
+const { Pool } = require('pg');
+
 const pool = new Pool({
-    user: process.env.DB_USER,
-    host: process.env.DB_HOST,
-    database: process.env.DB_DATABASE,
-    password: process.env.DB_PASSWORD,
-    port: process.env.DB_PORT,
+  user: 'postgres',          // Database user
+  host: 'localhost',         // Database host
+  database: 'Insurance',     // Database name
+  password: 'Marvelous9194', // Database password
+  port: 5432,                // Database port
 });
+
 
 // Setting up middleware
 app.use(cors()); // Enable CORS
