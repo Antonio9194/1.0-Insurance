@@ -81,6 +81,15 @@ function checkFileType(file, cb) {
     }
 }
 
+// Cron job to run every day at 23:43 Tokyo time
+cron.schedule('45 23 * * *', async () => {
+    console.log('Cron job started at 23:43 Tokyo time every day');
+    await sendReminderEmails();  // Call the sendReminderEmails function when the cron job runs
+  }, {
+    scheduled: true,
+    timezone: "Asia/Tokyo" // Tokyo timezone
+  });
+  
 // Function that contains the logic for sending emails
 async function sendReminderEmails() {
     try {
