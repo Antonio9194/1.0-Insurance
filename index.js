@@ -10,23 +10,15 @@ import nodemailer from 'nodemailer';
 import moment from 'moment';  // Import moment.js to work with dates
 import { sendEmail } from './emailUtils.js';
 import pg from 'pg';
-const { Pool } = pg;
+const { Pool } = pg; // This is the correct import
 import dotenv from 'dotenv';
 dotenv.config();
 import cron from 'node-cron';
-import twilio from 'twilio'; 
-
-const clientTwilio = new twilio(
-    process.env.TWILIO_ACCOUNT_SID,  // Your Twilio Account SID (from env variable)
-    process.env.TWILIO_AUTH_TOKEN   // Your Twilio Auth Token (from env variable)
-  );
 
 // Creating an instance of Express
 const app = express();
 
 // PostgreSQL pool definition to manage database connections
-const { Pool } = require('pg');
-
 const pool = new Pool({
   user: 'postgres',          // Database user
   host: 'localhost',         // Database host
@@ -34,6 +26,7 @@ const pool = new Pool({
   password: 'Marvelous9194', // Database password
   port: 5432,                // Database port
 });
+
 
 
 // Setting up middleware
@@ -87,115 +80,6 @@ function checkFileType(file, cb) {
         cb('Error: Images and PDFs only!');
     }
 }
-
-// Schedule the phone reminder to run every day at 6:00 PM
-cron.schedule('38 8 * * *', async () => {
-    console.log('Running daily phone reminder task at 6:00 PM...');
-    await sendPhoneReminder();
-  });
-
-  // Schedule the reminder emails to run every day at 8:18 AM
-cron.schedule('00 5 * * *', async () => {
-    console.log('Running daily reminder email task at 8:18 AM...');
-    await sendReminderEmails();
-  });
-  
-// Function to check if the phone number is for WhatsApp
-function isWhatsAppNumber(phone) {
-    return phone.startsWith('whatsapp:'); // Check if the phone number has 'whatsapp:' prefix
-  }
-  
-  // Function to send phone reminders (WhatsApp/SMS)
-  async function sendPhoneReminder() {
-    try {
-      const result = await pool.query(`
-        SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name, client.phone
-        FROM policy 
-        LEFT JOIN client ON policy.client_id = client.id
-        WHERE end_date <= CURRENT_DATE + INTERVAL '14 days'
-        AND end_date > CURRENT_DATE
-      `);
-  
-      if (result.rows.length === 0) {
-        console.log('No policies expiring in the next two weeks.');
-        return;
-      }
-  
-      for (const policy of result.rows) {
-        // Check if the phone reminder has already been sent
-        if (policy.phone_reminder_sent) {
-          console.log(`Phone reminder already sent for policy ${policy.policy_number}`);
-          continue; // Skip this policy if reminder was already sent
-        }
-  
-        const clientPhone = policy.phone; // Get client's phone number
-        const formattedDate = new Date(policy.end_date).toLocaleDateString('it-IT');
-        const message = `
-          Gentile ${policy.client_first_name} ${policy.client_last_name},
-  
-          Ci teniamo a ricordarle che la sua polizza ${policy.policy_number}, 
-          targata ${policy.license_plate}, è in scadenza giorno ${formattedDate}.
-          La invitiamo a recarsi in assicurazione entro la data indicata.
-  
-          Questa è una comunicazione automatica, si prega di non rispondere a questo messaggio.
-  
-          Cordiali saluti
-          Vinciguerra & Barbagallo SNC Assicurazioni
-  
-          Via Concetto Marchesi, 7b, 95125 Catania CT, Italia
-          Orari: Lunedì - Venerdì: 9:00 - 13:00, 15:30 - 18:30
-          Telefono: +39 095 749 6781
-        `;
-  
-        // Check if phone has WhatsApp
-        const hasWhatsApp = isWhatsAppNumber(clientPhone); // Function to check if the number is WhatsApp
-       
-        // Send the phone reminder (WhatsApp/SMS)
-        await sendPhoneReminderMessage(policy.client_id, clientPhone, message, hasWhatsApp);
-  
-        // Update the policy to mark the phone reminder as sent
-        await pool.query(`
-          UPDATE policy
-          SET phone_reminder_sent = TRUE
-          WHERE id = $1
-        `, [policy.id]);
-  
-        console.log(`Phone reminder sent for policy ${policy.policy_number}`);
-      }
-  
-      console.log('Phone reminders sent successfully!');
-    } catch (error) {
-      console.error('Error sending phone reminders:', error);
-    }
-  }
-  
-  // Function to send phone reminder message (WhatsApp/SMS)
-  async function sendPhoneReminderMessage(clientId, clientPhone, message, isWhatsApp) {
-    try {
-      const fromPhone = process.env.TWILIO_PHONE_NUMBER; // Get the Twilio number from environment variables
-      const fromWhatsApp = `whatsapp:${process.env.TWILIO_PHONE_NUMBER}`; // Twilio WhatsApp number from env
-  
-      if (isWhatsApp) {
-        // Send WhatsApp message
-        await clientTwilio.messages.create({
-          body: message,
-          from: fromWhatsApp, // Your Twilio WhatsApp number
-          to: clientPhone, // This should be prefixed with 'whatsapp:'
-        });
-        console.log("WhatsApp message sent!");
-      } else {
-        // Send SMS message
-        await clientTwilio.messages.create({
-          body: message,
-          from: fromPhone, // Your Twilio phone number for SMS
-          to: clientPhone, // Normal phone number for SMS
-        });
-        console.log("SMS message sent!");
-      }
-    } catch (error) {
-      console.error("Error sending phone reminder message:", error);
-    }
-  }  
 
 // Function that contains the logic for sending emails
 async function sendReminderEmails() {
