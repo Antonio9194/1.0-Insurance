@@ -82,8 +82,8 @@ function checkFileType(file, cb) {
 }
 
 // Cron job to run every day at 23:43 Tokyo time
-cron.schedule('45 23 * * *', async () => {
-    console.log('Cron job started at 23:43 Tokyo time every day');
+cron.schedule('46 09 * * *', async () => {
+    console.log('Cron job started');
     await sendReminderEmails();  // Call the sendReminderEmails function when the cron job runs
   }, {
     scheduled: true,
@@ -272,8 +272,28 @@ app.get('/viewFiles/:id', async (req, res) => {
     }
 });
 
+//Shows the main login page
+app.get('/', (req, res) => {
+    res.render('login');
+});
+  
+//Login
+app.post('/', (req, res) => {
+    const { password } = req.body;
+    
+    // Hardcoded password
+    const PASSWORD = 'viba0139';
+  
+    // Check if the entered password matches the hardcoded password
+    if (password === PASSWORD) {
+      res.redirect('/dashboard');  // Redirect to dashboard if correct
+    } else {
+      res.send('Invalid password!');  // Show error if incorrect
+    }
+  });  
+
 //Dashboard
-app.get('/', async (req, res) => {
+app.get('/dashboard', async (req, res) => {
     try {
         const clientsResult = await pool.query('SELECT * FROM client'); // Fetch all clients
         const clients = clientsResult.rows; // Get the rows from the result
@@ -899,12 +919,12 @@ function formatDate(dateString) {
     const date = new Date(dateString);
     return date.toLocaleDateString('it-IT', options);
 }
-
-// Start the server
-const PORT = process.env.PORT || 8081; // You can change this to 80, but Elastic Beanstalk typically uses dynamic ports
-app.listen(PORT, () => {
+//Start the server
+const PORT = process.env.PORT || 3000;  
+app.listen(PORT, () => {   
   console.log(`Server is running on port ${PORT}`);
 });
+
 
 
 // Export the app for use in other files

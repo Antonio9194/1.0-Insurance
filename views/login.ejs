@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Login</title>
+  
+  <!-- Bootstrap CSS -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-KyZXEJ6H+K6hWR0v+P+kF6Txl5pa7vL53dD0F5z5P0PfioD0JzCZ7jm1zY9YtTk5" crossorigin="anonymous">
+
+  <style>
+    body {
+      background-color: #f0f2f5;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    .login-container {
+      background: #ffffff;
+      padding: 40px;
+      border-radius: 10px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .login-container h2 {
+      text-align: center;
+      margin-bottom: 20px;
+      font-family: Arial, sans-serif; /* Set font to Arial */
+    }
+
+    .login-container input, .login-container button {
+      width: 100%;  /* Ensures input and button are same width */
+      padding: 10px;
+      font-size: 16px;
+      border-radius: 5px;
+      box-sizing: border-box;  /* Ensures padding is included in width */
+    }
+
+    .login-container input {
+      margin-bottom: 15px;
+    }
+
+    .login-container button {
+      margin-top: 10px;
+    }
+
+    /* Ensures the input and button have equal height */
+    .login-container input, .login-container button {
+      height: 50px; /* Adjust height to match each other */
+    }
+
+    /* Optionally remove focus outline */
+    .login-container input:focus, .login-container button:focus {
+      outline: none;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="login-container">
+    <h2>Vinciguerra&Barbagallo</h2>
+    <form action="/" method="POST">
+      <div class="mb-3">
+        <input type="password" name="password" class="form-control" placeholder="Inserire Password" required style="text-align: center;" />
+      </div>
+      <button type="submit" class="btn btn-primary">Login</button>
+    </form>
+  </div>
+
+  <!-- Bootstrap JS and dependencies (Optional for further interactivity) -->
+  <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js" integrity="sha384-oBqDVmMz4fnFO9gybPB1cu6hWwQhO6Z5Q+o6qD2OaQdG4R04x5ksERlW+iR2uSZe" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.min.js" integrity="sha384-pzjw8f+ua7Kw1TIq0F7CkJp5V+QXlgj0qqpzBzUEv5wzZlhFy5xW8z6cG5I6g2Jz" crossorigin="anonymous"></script>
+
+</body>
+</html>
