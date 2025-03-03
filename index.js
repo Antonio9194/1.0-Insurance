@@ -81,7 +81,7 @@ function checkFileType(file, cb) {
     }
 }
 
-// Cron job to run every day at 23:43 Tokyo time
+// Cron job to run every day Tokyo time
 cron.schedule('46 09 * * *', async () => {
     console.log('Cron job started');
     await sendReminderEmails();  // Call the sendReminderEmails function when the cron job runs
@@ -393,7 +393,7 @@ app.post("/addClient", async (req, res) => {
             [first_name, last_name, date_of_birth, address, email, phone, codice_fiscale, notes]
         );
         console.log("Added client:", result.rows[0]);
-        res.redirect("/");
+        res.redirect("/clients"); // Redirect to the clients list page
     } catch (error) {
         console.error("Error adding client:", error.message);
         res.status(500).send("Internal Server Error");
@@ -473,7 +473,7 @@ app.post("/editClient/:id", async (req, res) => {
             [first_name, last_name, date_of_birth, address, email, phone, codice_fiscale, notes, id]
         );
         console.log("Edited client:", result.rows[0]);
-        res.redirect("/"); // Redirect to the clients list page
+        res.redirect(`/specificClientInfo/${id}`); // Redirect to the specific client's page
     } catch (error) {
         console.error("Error editing client:", error.message);
         res.status(500).send("Internal Server Error");
@@ -486,7 +486,7 @@ app.post("/deleteClient/:id", async (req, res) => {
     try {
         const result = await pool.query("DELETE FROM client WHERE id = $1 RETURNING *", [id]);
         console.log("Deleted client:", result.rows[0]);
-        res.redirect("/"); // Redirect to the clients list page
+        res.redirect("/dashboard"); // Redirect to the clients list page
     } catch (error) {
         console.error("Error deleting client:", error.message);
         res.status(500).send("Impossibile eliminare il cliente perchè ha polizze attive");
@@ -590,6 +590,7 @@ app.post("/addPolicy", async (req, res) => {
     });
 
     try {
+        // Insert the new policy into the database
         const result = await pool.query(
             `INSERT INTO policy 
              (policy_number, client_id, type, license_plate, start_date, end_date, annual_premium, status, payment_frequency, payment_method, debt, notes) 
@@ -599,12 +600,15 @@ app.post("/addPolicy", async (req, res) => {
         );
 
         console.log("Added new policy:", result.rows[0]);
-        res.redirect("/");
+        
+        // Redirect to the specific client's policies page using client_id
+        res.redirect(`/specificClientPolicies/${client_id}`); // Use the client_id from the request body
     } catch (error) {
         console.error("Error adding policy:", error); // Log the entire error object
         res.status(500).send("Internal Server Error");
     }
 });
+
 
 // Show add policy form
 app.get("/addPolicies", async (req, res) => {
@@ -661,7 +665,7 @@ app.post("/editPolicies/:id", async (req, res) => {
             [policy_number, client_id, type, formattedStartDate, formattedEndDate, annual_premium, status, payment_frequency, payment_method, debt, notes, id]
         );
         console.log("Edited policy:", result.rows[0]);
-        res.redirect( "/"); // 
+        res.redirect(`/specificClientPolicies/${client_id}`); // 
     } catch (error) {
         console.error("Error editing policy:", error.message);
         res.status(500).send("Internal Server Error");
@@ -674,7 +678,7 @@ app.post("/deletePolicies/:id", async (req, res) => {
     try {
         const result = await pool.query("DELETE FROM policy WHERE id = $1 RETURNING *", [id]);
         console.log("Deleted policies:", result.rows[0]);
-        res.redirect("/"); 
+        res.redirect("/dashboard"); 
     } catch (error) {
         console.error("Error deleting policy:", error.message);
         res.status(500).send("Internal Server Error");
@@ -716,7 +720,7 @@ app.get("/dailyPolicies", async (req, res) => {
         // Render the daily policies view with the calculated dare value
         res.render("dailyPolicies", {
             policies: result.rows,
-            dare: dare, // Pass the dare value to the view
+            dare: dare, 
             avere: avere,
             cassa: cassa,
             error: null
@@ -727,62 +731,59 @@ app.get("/dailyPolicies", async (req, res) => {
     }
 });
 
-// Search policies
 app.post("/dailyPolicies", async (req, res) => {
-    const { policyName } = req.body; // Get the policy name from the request body
-
-    if (!policyName.trim()) {
-        return res.render("dailyPolicies", { policies: [], error: "Please enter a policy name." });
-    }
+    const { policyName } = req.body; // Get the policy name from the form
 
     try {
-        // Retrieve policies based on the policy name
-        const result = await pool.query(`
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-            FROM policy 
-            LEFT JOIN client ON policy.client_id = client.id 
-            WHERE policy_number ILIKE $1 
-            AND start_date = CURRENT_DATE
-            ORDER BY client.last_name
-        `, [`%${policyName}%`]);        
+        // If a policy name is provided, filter based on it; otherwise, get all policies for today
+        const policyFilter = policyName ? `AND policy.policy_number ILIKE '%${policyName}%'` : '';
 
-        // Calculate dare based on the retrieved policies
+        // Calculate the sum of policies with payment method 'Contanti' or 'Assegno' for today's policies
         const dareResult = await pool.query(`
             SELECT SUM(annual_premium) AS total_dare 
             FROM policy 
             WHERE payment_method IN ('Contanti', 'Assegno') 
             AND start_date = CURRENT_DATE
-            AND policy_number ILIKE $1
-        `, [`%${policyName}%`]); // Use the same search criteria
+            ${policyFilter}  -- Add policy filter
+        `);
         const dare = dareResult.rows[0].total_dare || 0; // Default to 0 if no records found
 
-        // Calculate avere based on the retrieved policies
         const avereResult = await pool.query(`
             SELECT SUM(annual_premium) AS total_avere 
             FROM policy 
             WHERE payment_method IN ('POS', 'Bonifico') 
             AND start_date = CURRENT_DATE
-            AND policy_number ILIKE $1
-        `, [`%${policyName}%`]); // Use the same search criteria
+            ${policyFilter}  -- Add policy filter
+        `);
         const avere = avereResult.rows[0].total_avere || 0;
 
-        // Render the daily policies view with updated dare and avere values
+        // Calculate avere - dare
+        const cassa = avere - dare;
+
+        // Retrieve daily policies along with client information
+        const result = await pool.query(`
+            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
+            FROM policy 
+            LEFT JOIN client ON policy.client_id = client.id 
+            WHERE policy.start_date = CURRENT_DATE
+            ${policyFilter}  -- Add policy filter
+            ORDER BY client.last_name
+        `);
+        
+        // Render the daily policies view with the calculated dare value
         res.render("dailyPolicies", {
             policies: result.rows,
-            dare: dare,
+            dare: dare, 
             avere: avere,
+            cassa: cassa,
             error: null
         });
     } catch (error) {
         console.error("Error fetching daily policies:", error);
-        res.render("dailyPolicies", {
-            policies: [],
-            dare: 0,
-            avere: 0,
-            error: "Error retrieving policies."
-        });
+        res.status(500).send("Internal Server Error");
     }
 });
+
 
 
 // Shows all the policies for a specific client
