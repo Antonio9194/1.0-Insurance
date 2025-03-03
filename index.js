@@ -846,7 +846,7 @@ app.get("/dailyPolicies", async (req, res) => {
       `
             SELECT SUM(annual_premium) AS total_dare 
             FROM policy 
-            WHERE payment_method IN ('Contanti', 'Assegno') 
+            WHERE payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
             AND created_at BETWEEN $1 AND $2
         `,
       [startOfDay, endOfDay]
@@ -857,7 +857,7 @@ app.get("/dailyPolicies", async (req, res) => {
       `
             SELECT SUM(annual_premium) AS total_avere 
             FROM policy 
-            WHERE payment_method IN ('POS', 'Bonifico') 
+            WHERE payment_method IN ('Contanti', 'Assegno') 
             AND created_at BETWEEN $1 AND $2
         `,
       [startOfDay, endOfDay]
@@ -893,6 +893,7 @@ app.get("/dailyPolicies", async (req, res) => {
   }
 });
 
+// Search daily policies
 app.post("/dailyPolicies", async (req, res) => {
   const { policyName } = req.body; // Get the policy name from the form
 
@@ -902,37 +903,42 @@ app.post("/dailyPolicies", async (req, res) => {
       ? `AND policy.policy_number ILIKE '%${policyName}%'`
       : "";
 
-    // Calculate the sum of policies with payment method 'Contanti' or 'Assegno' for today's policies
+    // Calculate the sum of policies with payment method POS, Bonifico, Prelevati, Finanziamento
     const dareResult = await pool.query(`
-            SELECT SUM(annual_premium) AS total_dare 
-            FROM policy 
-            WHERE payment_method IN ('Contanti', 'Assegno') 
-            AND start_date = CURRENT_DATE
-            ${policyFilter}  -- Add policy filter
-        `);
+        SELECT SUM(annual_premium) AS total_dare 
+        FROM policy 
+        WHERE payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
+        AND created_at >= CURRENT_DATE 
+        AND created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
+        ${policyFilter}  -- Add policy filter here
+    `);
     const dare = dareResult.rows[0].total_dare || 0; // Default to 0 if no records found
 
+    // Calculate the sum of policies with payment method Contanti, Assegno
     const avereResult = await pool.query(`
-            SELECT SUM(annual_premium) AS total_avere 
-            FROM policy 
-            WHERE payment_method IN ('POS', 'Bonifico') 
-            AND start_date = CURRENT_DATE
-            ${policyFilter}  -- Add policy filter
-        `);
+        SELECT SUM(annual_premium) AS total_avere 
+        FROM policy 
+        WHERE payment_method IN ('Contanti', 'Assegno') 
+        AND created_at >= CURRENT_DATE 
+        AND created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
+        ${policyFilter}  -- Add policy filter here
+    `);
     const avere = avereResult.rows[0].total_avere || 0;
 
     // Calculate avere - dare
     const cassa = avere - dare;
 
     // Retrieve daily policies along with client information
-    const result = await pool.query(`
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-            FROM policy 
-            LEFT JOIN client ON policy.client_id = client.id 
-            WHERE policy.start_date = CURRENT_DATE
-            ${policyFilter}  -- Add policy filter
-            ORDER BY client.last_name
-        `);
+const result = await pool.query(`
+    SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
+    FROM policy 
+    LEFT JOIN client ON policy.client_id = client.id 
+    WHERE policy.created_at >= CURRENT_DATE 
+    AND policy.created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
+    ${policyFilter}  -- Add policy filter here
+    ORDER BY client.last_name
+`);
+
 
     // Render the daily policies view with the calculated dare value
     res.render("dailyPolicies", {
