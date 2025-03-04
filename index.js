@@ -857,7 +857,7 @@ app.get("/dailyPolicies", async (req, res) => {
       `
             SELECT SUM(annual_premium) AS total_avere 
             FROM policy 
-            WHERE payment_method IN ('Contanti', 'Assegno') 
+            WHERE payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
             AND created_at BETWEEN $1 AND $2
         `,
       [startOfDay, endOfDay]
