@@ -36,126 +36,139 @@
         </header>
 
         <!-- Form-->
-        <form action="/addPolicy" method="POST">
-            <input type="hidden" id="client_id" name="client_id" value=""> <!-- Hidden input for client ID -->
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="policy_number">N° Polizza:</label>
-                    <input type="text" class="form-control" id="policy_number" name="policy_number" required>
-                </div>
-                <!-- Clients form -->
-                <div class="form-group col-md-6">
-                    <label for="client-search">Cliente:</label>
-                    <input 
-                        type="text" 
-                        id="client-search" 
-                        class="form-control" 
-                        placeholder="Search for a client..." 
-                        autocomplete="off"
-                        oninput="searchClients(this.value)" <!-- Call a function to search for clients -->
-                    
-                    <select id="client-dropdown" class="form-control" size="5" style="display: none;" onchange="selectClient(this)">
-                        <!-- Options will be populated dynamically -->
-                    </select>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="type">Tipo:</label>
-                    <select class="form-control" id="type" name="type" required>
-                        <option value="RC">RC AUTO</option>
-                        <option value="FURTO">FURTO</option>
-                        <option value="INCENDIO">INCENDIO</option>
-                        <option value="INFORTUNI">INFORTUNI</option>
-                        <option value="ASSISTENZA STRADALE">ASSISTENZA STRADALE</option>
-                        <option value="KASKO">KASKO</option>
-                        <option value="CRISTALLI">CRISTALLI</option>
-                        <option value="FENOMENI ATMOSFERICI">FENOMENI ATMOSFERICI</option>
-                        <option value="GRANDINE">GRANDINE</option>
-                        <option value="TERREMOTI">TERREMOTI</option>
-                        <option value="EVENTI CATASTROFALI">EVENTI CATASTROFALI</option>
-                        <option value="RCP">RCP</option>
-                        <option value="IMPRESA">IMPRESA</option>
-                        <option value="SALUTE">SALUTE</option>
-                        <option value="VITA">VITA</option>
-                        <option value="MEDICO">MEDICO</option>
-                        <option value="PROFESSIONE">PROFESSIONE</option>
-                        <option value="CASA">CASA</option>
-                    </select>
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="license_plate">Targa:</label>
-                    <input type="text" class="form-control" id="license_plate" name="license_plate" required>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="start_date">Data Inizio:</label>
-                    <input type="text" class="form-control" id="start_date" name="start_date" placeholder="gg/mm/aaaa" required>
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="end_date">Data Fine:</label>
-                    <input type="text" class="form-control" id="end_date" name="end_date" placeholder="gg/mm/aaaa" required>
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="annual_premium">Premio Annuo (€):</label>
-                    <input type="number" class="form-control" id="annual_premium" name="annual_premium" required
-                        step="0.01" placeholder="0.00">
-                </div>
-                <div class="form-group col-md-6">
-                    <label for="debt">Debito (€):</label>
-                    <input type="number" class="form-control" id="debt" name="debt" required step="0.01"
-                        placeholder="0.00">
-                </div>
-            </div>
-            <div class="form-row">
-                <div class="form-group col-md-6">
-                    <label for="status">Stato:</label>
-                    <select class="form-control" id="status" name="status" required>
-                        <option value="Attiva">Attiva</option>
-                        <option value="Sospesa">Sospesa</option>
-                        <option value="Annullamento">Annullamento</option>
-                        <option value="Scadenza">Scadenza</option>
-                        <option value="Riattivazione">Riattivazione</option>
-                        <option value="Sostituzione">Sostituzione</option>
-                    </select>
-                </div>
+<form action="/addPolicy" method="POST">
+    <input type="hidden" id="client_id" name="client_id" value=""> <!-- Hidden input for client ID -->
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="policy_number">N° Polizza:</label>
+            <input type="text" class="form-control" id="policy_number" name="policy_number" required>
+        </div>
+        <!-- Clients form -->
+        <div class="form-group col-md-6">
+            <label for="client-search">Cliente:</label>
+            <input 
+                type="text" 
+                id="client-search" 
+                class="form-control" 
+                placeholder="Search for a client..." 
+                autocomplete="off"
+                oninput="searchClients(this.value)" <!-- Call a function to search for clients -->
+            
+            <select id="client-dropdown" class="form-control" size="5" style="display: none;" onchange="selectClient(this)">
+                <!-- Options will be populated dynamically -->
+            </select>
+        </div>
+    </div>
 
-                <div class="form-group col-md-6">
-                    <label for="payment_frequency">Frequenza:</label>
-                    <select class="form-control" id="payment_frequency" name="payment_frequency" required>
-                        <option value="Mensile">Mensile</option>
-                        <option value="Trimestrale">Trimestrale</option>
-                        <option value="Semestrale">Semestrale</option>
-                        <option value="Annuale">Annuale</option>
-                    </select>
-                </div>
-                    <div class="form-group col-md-6">
-                        <label for="payment_method">Metodo di Pagamento:</label>
-                        <select class="form-control" id="payment_method" name="payment_method" required>
-                            <option value="Contanti">Contanti</option>
-                            <option value="POS">POS</option>
-                            <option value="Assegno">Assegno</option>
-                            <option value="Bonifico">Bonifico</option>
-                            <option value="Prelevati">Prelevati</option>
-                            <option value="Finanziamento">Finanziamento</option>
-                            <option value="Debito">Debito</option>
-                            
-                        </select>
-                    </div>
-                    <div class="form-group col-md-6">
-                        <label for="notes">Notes</label>
-                        <input type="text" class="form-control" id="notes" name="notes">
-                    </div>
-                </div>
-            <!-- Button Container -->
-            <div class="d-flex justify-content-start align-items-center" style="margin-top: 30px;">
-                <button type="submit" class="btn btn-outline-dark">Aggiungi Polizza</button>
-                <a href="javascript:history.back()" class="btn btn-secondary ml-4">Annulla</a>
-            </div>
-        </form>
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="type">Tipo:</label>
+            <select class="form-control" id="type" name="type" required>
+                <option value="RC">RC AUTO</option>
+                <option value="FURTO">FURTO</option>
+                <option value="INCENDIO">INCENDIO</option>
+                <option value="INFORTUNI">INFORTUNI</option>
+                <option value="ASSISTENZA STRADALE">ASSISTENZA STRADALE</option>
+                <option value="KASKO">KASKO</option>
+                <option value="CRISTALLI">CRISTALLI</option>
+                <option value="FENOMENI ATMOSFERICI">FENOMENI ATMOSFERICI</option>
+                <option value="GRANDINE">GRANDINE</option>
+                <option value="TERREMOTI">TERREMOTI</option>
+                <option value="EVENTI CATASTROFALI">EVENTI CATASTROFALI</option>
+                <option value="RCP">RCP</option>
+                <option value="IMPRESA">IMPRESA</option>
+                <option value="SALUTE">SALUTE</option>
+                <option value="VITA">VITA</option>
+                <option value="MEDICO">MEDICO</option>
+                <option value="PROFESSIONE">PROFESSIONE</option>
+                <option value="CASA">CASA</option>
+            </select>
+        </div>
+        <div class="form-group col-md-6">
+            <label for="license_plate">Targa:</label>
+            <input type="text" class="form-control" id="license_plate" name="license_plate" required>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="start_date">Data Inizio:</label>
+            <input type="text" class="form-control" id="start_date" name="start_date" placeholder="gg/mm/aaaa" required>
+        </div>
+        <div class="form-group col-md-6">
+            <label for="end_date">Data Fine:</label>
+            <input type="text" class="form-control" id="end_date" name="end_date" placeholder="gg/mm/aaaa" required>
+        </div>
+    </div>
+
+    <div class="form-row">
+        <!-- Premio Annuo Field -->
+        <div class="form-group col-md-6">
+            <label for="annual_premium">Premio Annuo (€):</label>
+            <input type="number" class="form-control" id="annual_premium" name="annual_premium" required step="0.01" placeholder="0.00">
+        </div>
+
+        <!-- Premio Pagato (Paid Premium) Field and Debito Field on the same row -->
+        <div class="form-group col-md-3">
+            <label for="paid_premium">Premio Pagato (€):</label>
+            <input type="number" class="form-control" id="paid_premium" name="paid_premium" required step="0.01" placeholder="0.00">
+        </div>
+
+        <div class="form-group col-md-3">
+            <label for="debt">Debito (€):</label>
+            <input type="number" class="form-control" id="debt" name="debt" required step="0.01" placeholder="0.00">
+        </div>
+    </div>
+
+    <div class="form-row">
+        <div class="form-group col-md-6">
+            <label for="status">Stato:</label>
+            <select class="form-control" id="status" name="status" required>
+                <option value="Attiva">Attiva</option>
+                <option value="Sospesa">Sospesa</option>
+                <option value="Annullamento">Annullamento</option>
+                <option value="Scadenza">Scadenza</option>
+                <option value="Riattivazione">Riattivazione</option>
+                <option value="Sostituzione">Sostituzione</option>
+            </select>
+        </div>
+
+        <div class="form-group col-md-6">
+            <label for="payment_frequency">Frequenza:</label>
+            <select class="form-control" id="payment_frequency" name="payment_frequency" required>
+                <option value="Mensile">Mensile</option>
+                <option value="Trimestrale">Trimestrale</option>
+                <option value="Semestrale">Semestrale</option>
+                <option value="Annuale">Annuale</option>
+            </select>
+        </div>
+
+        <div class="form-group col-md-6">
+            <label for="payment_method">Metodo di Pagamento:</label>
+            <select class="form-control" id="payment_method" name="payment_method" required>
+                <option value="Contanti">Contanti</option>
+                <option value="POS">POS</option>
+                <option value="Assegno">Assegno</option>
+                <option value="Bonifico">Bonifico</option>
+                <option value="Prelevati">Prelevati</option>
+                <option value="Finanziamento">Finanziamento</option>
+                <option value="Debito">Debito</option>
+            </select>
+        </div>
+
+        <div class="form-group col-md-6">
+            <label for="notes">Notes</label>
+            <input type="text" class="form-control" id="notes" name="notes">
+        </div>
+    </div>
+
+    <!-- Button Container -->
+    <div class="d-flex justify-content-start align-items-center" style="margin-top: 30px;">
+        <button type="submit" class="btn btn-outline-dark">Aggiungi Polizza</button>
+        <a href="javascript:history.back()" class="btn btn-secondary ml-4">Annulla</a>
+    </div>
+</form>
+
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.9.2/dist/umd/popper.min.js"></script>
