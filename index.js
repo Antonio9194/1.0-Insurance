@@ -744,14 +744,27 @@ app.get("/addPolicies", async (req, res) => {
 app.get("/editPolicies/:id", async (req, res) => {
   const { id } = req.params;
   try {
-    const result = await pool.query("SELECT * FROM policy WHERE id = $1", [id]);
-    const policy = result.rows[0];
-    res.render("editPolicies", { policy, formatDate }); // Pass formatDate to the view
+    // Query to get policy details and join with the client to get first and last name
+    const result = await pool.query(
+      `SELECT policy.*, client.first_name, client.last_name
+       FROM policy
+       JOIN client ON policy.client_id = client.id
+       WHERE policy.id = $1`,
+      [id]
+    );
+
+    const policy = result.rows[0]; // Get the policy with client data
+    if (!policy) {
+      return res.status(404).send("Policy not found");
+    }
+
+    res.render("editPolicies", { policy, formatDate }); // Pass policy and formatDate to the view
   } catch (error) {
     console.error("Error retrieving policy:", error.message);
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 // Edits a policy
 app.post("/editPolicies/:id", async (req, res) => {
@@ -768,6 +781,8 @@ app.post("/editPolicies/:id", async (req, res) => {
     payment_method,
     debt,
     notes,
+    paid_premium,
+    license_plate,
   } = req.body;
 
   console.log("Request Body:", req.body); // Log the request body
@@ -793,7 +808,7 @@ app.post("/editPolicies/:id", async (req, res) => {
 
   try {
     const result = await pool.query(
-      "UPDATE policy SET policy_number = $1, client_id = $2, type = $3, start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), annual_premium = $6, status = $7, payment_frequency = $8, payment_method = $9, debt = $10, notes = $11 WHERE id = $12 RETURNING *",
+      "UPDATE policy SET policy_number = $1, client_id = $2, type = $3, start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), annual_premium = $6, status = $7, payment_frequency = $8, payment_method = $9, debt = $10, notes = $11, paid_premium = $12, license_plate = $13 WHERE id = $14 RETURNING *",
       [
         policy_number,
         client_id,
@@ -806,6 +821,8 @@ app.post("/editPolicies/:id", async (req, res) => {
         payment_method,
         debt,
         notes,
+        paid_premium,
+        license_plate,
         id,
       ]
     );
