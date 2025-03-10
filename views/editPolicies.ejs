@@ -41,12 +41,23 @@
             <label for="policy_number">N° Polizza:</label>
             <input type="text" class="form-control" id="policy_number" name="policy_number" required value="<%= policy.policy_number %>">
         </div>
-        <div class="form-group col-md-6">
-            <label for="client_name">Cliente:</label>
-            <!-- This field shows the client's name, but it's disabled or read-only -->
-            <input type="text" class="form-control" id="client_name" name="client_name" value="<%= policy.first_name %> <%= policy.last_name %>" disabled>
-        </div>
-        
+       <!-- Clients form -->
+       <div class="form-group col-md-6">
+        <label for="client-search">Cliente:</label>
+        <input 
+            type="text" 
+            id="client-search" 
+            class="form-control" 
+            placeholder="Search for a client..." 
+            autocomplete="off"
+            oninput="searchClients(this.value)"
+            value="<%= policy.first_name %> <%= policy.last_name %>" /> <!-- Prepopulate with the client's name -->
+    
+        <select id="client-dropdown" class="form-control" size="5" style="display: none;" onchange="selectClient(this)">
+            <!-- Options will be populated dynamically based on search -->
+        </select>
+    </div>
+    
         <!-- Hidden input for client_id -->
         <input type="hidden" id="client_id" name="client_id" value="<%= policy.client_id %>">
         
@@ -189,6 +200,53 @@
             var year = d.getFullYear();
             return day + "/" + month + "/" + year;
         }
+    </script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const clientSearch = document.getElementById('client-search');
+            const clientDropdown = document.getElementById('client-dropdown');
+    
+            // Event listener for client input
+            clientSearch.addEventListener('input', () => {
+                const query = clientSearch.value.trim();
+    
+                if (!query) {
+                    clientDropdown.style.display = 'none';
+                    clientDropdown.innerHTML = ''; // Clear dropdown if input is empty
+                    return;
+                }
+    
+                fetch(`/searchClients?q=${encodeURIComponent(query)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        console.log("Client search results:", data); // Log the data to check its structure
+                        clientDropdown.innerHTML = ''; // Clear previous results
+    
+                        if (data.length === 0) {
+                            clientDropdown.style.display = 'none';
+                            return;
+                        }
+    
+                        data.forEach(client => {
+                            const option = document.createElement('option');
+                            option.value = client.id; // Set the value to the client's ID
+                            option.textContent = `${client.first_name} ${client.last_name} (${client.codice_fiscale})`; // Ensure these properties exist
+                            clientDropdown.appendChild(option);
+                        });
+    
+                        clientDropdown.style.display = 'block'; // Show the dropdown
+                    })
+                    .catch(error => console.error('Error fetching clients:', error));
+            });
+    
+            // Event listener for client dropdown selection
+            clientDropdown.addEventListener('change', () => {
+                const selectedOption = clientDropdown.options[clientDropdown.selectedIndex];
+                clientSearch.value = selectedOption.textContent; // Display the selected client's name
+                document.getElementById('client_id').value = selectedOption.value; // Set the hidden input value
+                clientDropdown.style.display = 'none'; // Hide the dropdown after selection
+            });
+        });
     </script>
     <script>
         document.addEventListener('DOMContentLoaded', () => {
