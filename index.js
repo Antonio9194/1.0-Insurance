@@ -870,7 +870,7 @@ app.get("/dailyPolicies", async (req, res) => {
 
     const avereResult = await pool.query(
       `SELECT 
-        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno') THEN paid_premium ELSE 0 END) AS total_avere 
+        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END) AS total_avere 
       FROM policy 
       WHERE created_at BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
