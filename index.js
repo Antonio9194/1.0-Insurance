@@ -783,27 +783,134 @@ app.get("/editPolicies/:id", async (req, res) => {
 });
 
 
+// Edits a policy
+app.post("/editPolicies/:id", async (req, res) => {
+  const { id } = req.params;
+  const {
+    policy_number,
+    client_id,
+    type,
+    start_date,
+    end_date,
+    annual_premium,
+    status,
+    payment_frequency,
+    payment_method,
+    debt,
+    notes,
+    paid_premium,
+    license_plate,
+  } = req.body;
+
+  console.log("Request Body:", req.body);
+
+  // Validate date formats
+  if (!isValidDate(start_date) || !isValidDate(end_date)) {
+    return res.status(400).send("Invalid date format. Please use DD/MM/YYYY.");
+  }
+
+  function isValidDate(dateString) {
+    return /^\d{2}\/\d{2}\/\d{4}$/.test(dateString);
+  }
+
+  function convertDateFormat(dateString) {
+    const parts = dateString.split("/");
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
+  }
+
+  const formattedStartDate = convertDateFormat(start_date);
+  const formattedEndDate = convertDateFormat(end_date);
+
+  try {
+    // Get the current values before updating
+    const oldPolicy = await pool.query("SELECT paid_premium, debt FROM policy WHERE id = $1", [id]);
+
+    if (oldPolicy.rows.length === 0) {
+      return res.status(404).send("Policy not found");
+    }
+
+    const previousPaidPremium = oldPolicy.rows[0].paid_premium || 0;
+    const previousDebt = oldPolicy.rows[0].debt || 0;
+
+    // Calculate the differences
+    const paidPremiumDifference = Math.max(0, paid_premium - previousPaidPremium);
+    const debtDifference = Math.max(0, previousDebt - debt);
+
+    // Update the policy **AND store the paid debt difference**
+    const result = await pool.query(
+      `UPDATE policy 
+       SET policy_number = $1, client_id = $2, type = $3, start_date = TO_DATE($4, 'YYYY-MM-DD'), 
+           end_date = TO_DATE($5, 'YYYY-MM-DD'), annual_premium = $6, status = $7, 
+           payment_frequency = $8, payment_method = $9, debt = $10, notes = $11, 
+           paid_premium = $12, license_plate = $13, updated_at = NOW(),
+           paid_debt = paid_debt + $14  -- ✅ Store the added amount
+       WHERE id = $15 RETURNING *`,
+      [
+        policy_number,
+        client_id,
+        type,
+        formattedStartDate,
+        formattedEndDate,
+        annual_premium,
+        status,
+        payment_frequency,
+        payment_method,
+        debt,
+        notes,
+        paid_premium,
+        license_plate,
+        paidPremiumDifference, // ✅ Add only the new amount
+        id,
+      ]
+    );
+
+    console.log("Edited policy:", result.rows[0]);
+
+    // Redirect with difference values as query params (optional)
+    res.redirect(`/specificClientPolicies/${client_id}?paidPremiumDiff=${paidPremiumDifference}&debtDiff=${debtDifference}`);
+  } catch (error) {
+    console.error("Error editing policy:", error);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+
+// Deletes a policy
+app.post("/deletePolicies/:id", async (req, res) => {
+  const { id } = req.params;
+  try {
+    const result = await pool.query(
+      "DELETE FROM policy WHERE id = $1 RETURNING *",
+      [id]
+    );
+    console.log("Deleted policies:", result.rows[0]);
+    res.redirect("/dashboard");
+  } catch (error) {
+    console.error("Error deleting policy:", error.message);
+    res.status(500).send("Internal Server Error");
+  }
+});
+
+// Set server time zone to Italy
+process.env.TZ = "Europe/Rome";
+
 // Shows daily policies
 app.get("/dailyPolicies", async (req, res) => {
   try {
-    // Get the current time in Italy
-    const nowInItaly = new Date().toLocaleString("en-US", { timeZone: "Europe/Rome" });
+    // ✅ Get current date in Italian time
+    const options = { timeZone: "Europe/Rome", hour12: false };
+    const nowInItaly = new Date().toLocaleString("en-US", options);
     const italyDate = new Date(nowInItaly);
 
-    // Set start and end of the Italian day
+    // ✅ Set start and end of the Italian day
     const startOfDay = new Date(italyDate);
     startOfDay.setHours(0, 0, 0, 0);
 
     const endOfDay = new Date(italyDate);
     endOfDay.setHours(23, 59, 59, 999);
 
-    // Convert to UTC to match database storage
-    const startOfDayUTC = new Date(startOfDay.getTime() - startOfDay.getTimezoneOffset() * 60000);
-    const endOfDayUTC = new Date(endOfDay.getTime() - endOfDay.getTimezoneOffset() * 60000);
-
-    console.log("Server Time:", new Date().toISOString());
-    console.log("Start of Italian Day (UTC):", startOfDayUTC.toISOString());
-    console.log("End of Italian Day (UTC):", endOfDayUTC.toISOString());
+    console.log("Start of Italian day:", startOfDay.toISOString());
+    console.log("End of Italian day:", endOfDay.toISOString());
 
     // ✅ Calculate Dare (Debts + Certain Payments)
     const dareResult = await pool.query(
@@ -813,8 +920,8 @@ app.get("/dailyPolicies", async (req, res) => {
           THEN paid_premium ELSE 0 
         END) + SUM(debt) AS total_dare 
       FROM policy 
-      WHERE created_at BETWEEN $1 AND $2`,
-      [startOfDayUTC, endOfDayUTC]
+      WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)`,
+      [startOfDay, endOfDay]
     );
 
     console.log("Dare Result:", dareResult.rows);
@@ -823,16 +930,17 @@ app.get("/dailyPolicies", async (req, res) => {
     const avereResult = await pool.query(
       `SELECT 
           SUM(CASE 
-              WHEN created_at BETWEEN $1 AND $2 
+              WHEN created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
               AND payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
               THEN paid_premium 
-              WHEN updated_at BETWEEN $1 AND $2 
+              WHEN updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
               THEN paid_debt
               ELSE 0 
           END) AS total_avere
        FROM policy
-       WHERE created_at BETWEEN $1 AND $2 OR updated_at BETWEEN $1 AND $2`,  
-      [startOfDayUTC, endOfDayUTC]
+       WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2) 
+          OR (updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)`,  
+      [startOfDay, endOfDay]
     );    
 
     console.log("Avere Result:", avereResult.rows);
@@ -842,9 +950,10 @@ app.get("/dailyPolicies", async (req, res) => {
       `SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
       FROM policy 
       LEFT JOIN client ON policy.client_id = client.id 
-      WHERE policy.created_at BETWEEN $1 AND $2 OR policy.updated_at BETWEEN $1 AND $2
+      WHERE (policy.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2) 
+         OR (policy.updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)
       ORDER BY client.last_name`,
-      [startOfDayUTC, endOfDayUTC]
+      [startOfDay, endOfDay]
     );
 
     console.log("Policies Found:", result.rows.length);
@@ -870,6 +979,7 @@ app.get("/dailyPolicies", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 // Search daily policies
 app.post("/dailyPolicies", async (req, res) => {
