@@ -897,20 +897,16 @@ process.env.TZ = "Europe/Rome";
 // Shows daily policies
 app.get("/dailyPolicies", async (req, res) => {
   try {
-    // ✅ Get current date in Italian time
-    const options = { timeZone: "Europe/Rome", hour12: false };
-    const nowInItaly = new Date().toLocaleString("en-US", options);
-    const italyDate = new Date(nowInItaly);
+    // Get start and end of today in Italy (Europe/Rome)
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0); // Set to UTC midnight
+    startOfDay.setHours(startOfDay.getHours() + 1); // Convert to Rome time
 
-    // ✅ Set start and end of the Italian day
-    const startOfDay = new Date(italyDate);
-    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date();
+    endOfDay.setUTCHours(23, 59, 59, 999); // Set to UTC end of day
+    endOfDay.setHours(endOfDay.getHours() + 1); // Convert to Rome time
 
-    const endOfDay = new Date(italyDate);
-    endOfDay.setHours(23, 59, 59, 999);
-
-    console.log("Start of Italian day:", startOfDay.toISOString());
-    console.log("End of Italian day:", endOfDay.toISOString());
+    console.log("Fetching daily policies between:", startOfDay, "and", endOfDay);
 
     // ✅ Calculate Dare (Debts + Certain Payments)
     const dareResult = await pool.query(
@@ -920,7 +916,8 @@ app.get("/dailyPolicies", async (req, res) => {
           THEN paid_premium ELSE 0 
         END) + SUM(debt) AS total_dare 
       FROM policy 
-      WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)`,
+      WHERE created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' 
+      BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
     );
 
@@ -930,16 +927,16 @@ app.get("/dailyPolicies", async (req, res) => {
     const avereResult = await pool.query(
       `SELECT 
           SUM(CASE 
-              WHEN created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+              WHEN created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
               AND payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
               THEN paid_premium 
-              WHEN updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+              WHEN updated_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
               THEN paid_debt
               ELSE 0 
           END) AS total_avere
        FROM policy
-       WHERE (created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2) 
-          OR (updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)`,  
+       WHERE created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+         OR updated_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
     );    
 
@@ -950,8 +947,8 @@ app.get("/dailyPolicies", async (req, res) => {
       `SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
       FROM policy 
       LEFT JOIN client ON policy.client_id = client.id 
-      WHERE (policy.created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2) 
-         OR (policy.updated_at AT TIME ZONE 'UTC' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)
+      WHERE policy.created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+         OR policy.updated_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2
       ORDER BY client.last_name`,
       [startOfDay, endOfDay]
     );
@@ -969,8 +966,8 @@ app.get("/dailyPolicies", async (req, res) => {
     res.render("dailyPolicies", {
       policies: result.rows,
       dare: dareTotal,
-      avere: avereTotal,
-      cassa: cassaTotal,
+      avere: avereTotal,  // Now correctly includes Paid Premium for created today and Paid Debt for modified today
+      cassa: cassaTotal,  // The final value for cassa
       error: null,
     });
 
