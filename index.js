@@ -807,8 +807,30 @@ app.post("/editPolicies/:id", async (req, res) => {
   }
 
   try {
+    // Fetch previous debt and paid_debt
+    const oldPolicy = await pool.query("SELECT debt, paid_debt FROM policy WHERE id = $1", [id]);
+
+    if (oldPolicy.rows.length === 0) {
+      return res.status(404).send("Policy not found.");
+    }
+
+    const previousDebt = oldPolicy.rows[0].debt || 0;
+    const previousPaidDebt = oldPolicy.rows[0].paid_debt || 0;
+
+    // Calculate new paid_debt
+    let paidDebtIncrease = previousDebt - debt;
+    if (paidDebtIncrease < 0) paidDebtIncrease = 0;
+
+    const newPaidDebt = previousPaidDebt + paidDebtIncrease;
+
     const result = await pool.query(
-      "UPDATE policy SET policy_number = $1, client_id = $2, type = $3, start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), annual_premium = $6, status = $7, payment_frequency = $8, payment_method = $9, debt = $10, notes = $11, paid_premium = $12, license_plate = $13 WHERE id = $14 RETURNING *",
+      `UPDATE policy 
+       SET policy_number = $1, client_id = $2, type = $3, 
+           start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), 
+           annual_premium = $6, status = $7, payment_frequency = $8, 
+           payment_method = $9, debt = $10, notes = $11, 
+           paid_premium = $12, paid_debt = $13, license_plate = $14 
+       WHERE id = $15 RETURNING *`,
       [
         policy_number,
         client_id,
@@ -822,17 +844,20 @@ app.post("/editPolicies/:id", async (req, res) => {
         debt,
         notes,
         paid_premium,
+        newPaidDebt,
         license_plate,
         id,
       ]
     );
+
     console.log("Edited policy:", result.rows[0]);
-    res.redirect(`/specificClientPolicies/${client_id}`); //
+    res.redirect(`/specificClientPolicies/${client_id}`);
   } catch (error) {
     console.error("Error editing policy:", error.message);
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 // Deletes a policy
 app.post("/deletePolicies/:id", async (req, res) => {
@@ -889,19 +914,33 @@ app.get("/dailyPolicies", async (req, res) => {
 
     console.log("Policies Found:", result.rows.length);
 
+    const paidDebtResult = await pool.query(
+      `SELECT COALESCE(SUM(paid_debt), 0) AS total_paid_debt 
+       FROM policy 
+       WHERE DATE(updated_at) = CURRENT_DATE`
+    );
+
+    // Extract values safely
+    const totalAvere = avereResult.rows[0].total_avere || 0;
+    const totalDare = dareResult.rows[0].total_dare || 0;
+    const totalPaidDebt = paidDebtResult.rows[0].total_paid_debt || 0;
+
     res.render("dailyPolicies", {
       policies: result.rows,
-      dare: dareResult.rows[0].total_dare || 0,
-      avere: avereResult.rows[0].total_avere || 0,
-      cassa: (avereResult.rows[0].total_avere || 0) - (dareResult.rows[0].total_dare || 0),
+      dare: parseFloat(totalDare).toFixed(2),
+      avere: parseFloat(totalAvere).toFixed(2),
+      paidDebtResult: parseFloat(totalPaidDebt).toFixed(2),
+      cassa: (parseFloat(totalAvere) - parseFloat(totalDare) + parseFloat(totalPaidDebt)).toFixed(2),
       error: null,
     });
+    
 
   } catch (error) {
     console.error("Error fetching daily policies:", error);
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 
 // Search daily policies
