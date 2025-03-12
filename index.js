@@ -310,7 +310,6 @@ app.post("/", (req, res) => {
   }
 });
 
-//Dashboard
 app.get("/dashboard", async (req, res) => {
   try {
     const clientsResult = await pool.query("SELECT * FROM client"); // Fetch all clients
@@ -329,17 +328,35 @@ app.get("/dashboard", async (req, res) => {
     SELECT * 
     FROM policy 
     WHERE created_at BETWEEN $1 AND $2
+    OR updated_at BETWEEN $1 AND $2
 `,
       [startOfDay, endOfDay]
     );
 
     const todayPolicies = dailyPoliciesResult.rows;
 
+    // Calculate the total sum of paid premium and paid debt for today's policies
     const dailyPaidPremium = todayPolicies
       .reduce((total, policy) => {
-        return total + (parseFloat(policy.paid_premium) || 0);
+        // Check if the policy was created today
+        const isCreatedToday = new Date(policy.created_at).toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+        // Check if the policy was updated today
+        const isUpdatedToday = new Date(policy.updated_at).toISOString().split('T')[0] === new Date().toISOString().split('T')[0];
+
+        if (isCreatedToday) {
+          // If the policy was created today, add the paid_premium
+          return total + (parseFloat(policy.paid_premium) || 0);
+        } else if (isUpdatedToday) {
+          // If the policy was updated today, add the paid_debt
+          return total + (parseFloat(policy.paid_debt) || 0);
+        }
+
+        // If not created or updated today, don't add anything
+        return total;
       }, 0)
-      .toFixed(2); // Calculate the total sum of paid_premium for today's policies
+      .toFixed(2); // Format the total to 2 decimal places
+
+    console.log("Total Daily Paid Premium + Paid Debt:", dailyPaidPremium);
 
     // Calculate the total sum of debt for today's policies
     const dailyDebt = todayPolicies
@@ -348,12 +365,12 @@ app.get("/dashboard", async (req, res) => {
       }, 0)
       .toFixed(2); // Format to two decimal places
 
-    // Render the dashboard view with clients, policies, total premium, total debt, total net, and number of today's policies
+    // Render the dashboard with the required data
     res.render("dashboard", {
       clients,
       policies,
       todayPolicies,
-      dailyPaidPremium,
+      dailyPaidPremium,  // Use the correct variable name here
       dailyDebt,
       error: null,
     });
@@ -362,6 +379,7 @@ app.get("/dashboard", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 // Search clients
 app.get("/searchClients", async (req, res) => {
@@ -785,7 +803,7 @@ app.post("/editPolicies/:id", async (req, res) => {
     license_plate,
   } = req.body;
 
-  console.log("Request Body:", req.body); // Log the request body
+  console.log("Request Body:", req.body);
 
   // Validate date formats
   if (!isValidDate(start_date) || !isValidDate(end_date)) {
@@ -793,22 +811,41 @@ app.post("/editPolicies/:id", async (req, res) => {
   }
 
   function isValidDate(dateString) {
-    const regex = /^\d{2}\/\d{2}\/\d{4}$/; // Matches DD/MM/YYYY
-    return regex.test(dateString);
+    return /^\d{2}\/\d{2}\/\d{4}$/.test(dateString);
   }
-
-  // Convert dates from DD/MM/YYYY to YYYY-MM-DD for SQL
-  const formattedStartDate = convertDateFormat(start_date);
-  const formattedEndDate = convertDateFormat(end_date);
 
   function convertDateFormat(dateString) {
     const parts = dateString.split("/");
-    return `${parts[2]}-${parts[1]}-${parts[0]}`; // Converts to YYYY-MM-DD
+    return `${parts[2]}-${parts[1]}-${parts[0]}`;
   }
 
+  const formattedStartDate = convertDateFormat(start_date);
+  const formattedEndDate = convertDateFormat(end_date);
+
   try {
+    // Get the current values before updating
+    const oldPolicy = await pool.query("SELECT paid_premium, debt FROM policy WHERE id = $1", [id]);
+
+    if (oldPolicy.rows.length === 0) {
+      return res.status(404).send("Policy not found");
+    }
+
+    const previousPaidPremium = oldPolicy.rows[0].paid_premium || 0;
+    const previousDebt = oldPolicy.rows[0].debt || 0;
+
+    // Calculate the differences
+    const paidPremiumDifference = Math.max(0, paid_premium - previousPaidPremium);
+    const debtDifference = Math.max(0, previousDebt - debt);
+
+    // Update the policy **AND store the paid debt difference**
     const result = await pool.query(
-      "UPDATE policy SET policy_number = $1, client_id = $2, type = $3, start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), annual_premium = $6, status = $7, payment_frequency = $8, payment_method = $9, debt = $10, notes = $11, paid_premium = $12, license_plate = $13 WHERE id = $14 RETURNING *",
+      `UPDATE policy 
+       SET policy_number = $1, client_id = $2, type = $3, start_date = TO_DATE($4, 'YYYY-MM-DD'), 
+           end_date = TO_DATE($5, 'YYYY-MM-DD'), annual_premium = $6, status = $7, 
+           payment_frequency = $8, payment_method = $9, debt = $10, notes = $11, 
+           paid_premium = $12, license_plate = $13, updated_at = NOW(),
+           paid_debt = paid_debt + $14  -- ✅ Store the added amount
+       WHERE id = $15 RETURNING *`,
       [
         policy_number,
         client_id,
@@ -823,16 +860,21 @@ app.post("/editPolicies/:id", async (req, res) => {
         notes,
         paid_premium,
         license_plate,
+        paidPremiumDifference, // ✅ Add only the new amount
         id,
       ]
     );
+
     console.log("Edited policy:", result.rows[0]);
-    res.redirect(`/specificClientPolicies/${client_id}`); //
+
+    // Redirect with difference values as query params (optional)
+    res.redirect(`/specificClientPolicies/${client_id}?paidPremiumDiff=${paidPremiumDifference}&debtDiff=${debtDifference}`);
   } catch (error) {
-    console.error("Error editing policy:", error.message);
+    console.error("Error editing policy:", error);
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 // Deletes a policy
 app.post("/deletePolicies/:id", async (req, res) => {
@@ -850,6 +892,7 @@ app.post("/deletePolicies/:id", async (req, res) => {
   }
 });
 
+// Shows daily policies
 app.get("/dailyPolicies", async (req, res) => {
   try {
     const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
@@ -857,10 +900,13 @@ app.get("/dailyPolicies", async (req, res) => {
 
     console.log("Fetching daily policies between:", startOfDay, "and", endOfDay);
 
+    // ✅ Calculate Dare (Debts + Certain Payments)
     const dareResult = await pool.query(
       `SELECT 
-        SUM(CASE WHEN payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END) 
-        + SUM(debt) AS total_dare 
+        SUM(CASE 
+          WHEN payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
+          THEN paid_premium ELSE 0 
+        END) + SUM(debt) AS total_dare 
       FROM policy 
       WHERE created_at BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
@@ -868,32 +914,47 @@ app.get("/dailyPolicies", async (req, res) => {
 
     console.log("Dare Result:", dareResult.rows);
 
+    // ✅ Calculate Avere (Paid Premium for Created Today, Paid Debt for Modified Today)
     const avereResult = await pool.query(
       `SELECT 
-        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END) AS total_avere 
-      FROM policy 
-      WHERE created_at BETWEEN $1 AND $2`,
+          SUM(CASE 
+              WHEN created_at BETWEEN $1 AND $2 
+              AND payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
+              THEN paid_premium 
+              WHEN updated_at BETWEEN $1 AND $2 
+              THEN paid_debt
+              ELSE 0 
+          END) AS total_avere
+       FROM policy
+       WHERE created_at BETWEEN $1 AND $2 OR updated_at BETWEEN $1 AND $2`,  // Considering both created and updated today
       [startOfDay, endOfDay]
-    );
+    );    
 
     console.log("Avere Result:", avereResult.rows);
 
+    // ✅ Fetch Policies Created or Updated Today
     const result = await pool.query(
       `SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
       FROM policy 
       LEFT JOIN client ON policy.client_id = client.id 
-      WHERE policy.created_at BETWEEN $1 AND $2
+      WHERE policy.created_at BETWEEN $1 AND $2 OR policy.updated_at BETWEEN $1 AND $2
       ORDER BY client.last_name`,
       [startOfDay, endOfDay]
     );
 
     console.log("Policies Found:", result.rows.length);
 
+    // ✅ Fixing "Avere" Calculation
+    const dareTotal = dareResult.rows[0].total_dare || 0;
+    const avereTotal = avereResult.rows[0].total_avere || 0;
+    const cassaTotal = avereTotal - dareTotal;
+
+    // ✅ RENDER THE PAGE HERE
     res.render("dailyPolicies", {
       policies: result.rows,
-      dare: dareResult.rows[0].total_dare || 0,
-      avere: avereResult.rows[0].total_avere || 0,
-      cassa: (avereResult.rows[0].total_avere || 0) - (dareResult.rows[0].total_dare || 0),
+      dare: dareTotal,
+      avere: avereTotal,  // Now correctly includes Paid Premium for created today and Paid Debt for modified today
+      cassa: cassaTotal,
       error: null,
     });
 
@@ -902,6 +963,8 @@ app.get("/dailyPolicies", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
+
+
 
 
 // Search daily policies
