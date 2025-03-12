@@ -891,14 +891,24 @@ app.post("/deletePolicies/:id", async (req, res) => {
   }
 });
 
-// Shows daily policies
 app.get("/dailyPolicies", async (req, res) => {
   try {
-    // Get start and end of today for filtering
-    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)); // Start of today
-    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999)); // End of today
+    // ✅ Convert to Italian Time (Europe/Rome)
+    const options = { timeZone: "Europe/Rome", hour12: false };
 
-    console.log("Fetching daily policies between:", startOfDay, "and", endOfDay);
+    // Get current date in Italy
+    const nowInItaly = new Date().toLocaleString("en-US", options);
+    const italyDate = new Date(nowInItaly);
+
+    // Set start and end of the Italian day
+    const startOfDay = new Date(italyDate);
+    startOfDay.setHours(0, 0, 0, 0);
+
+    const endOfDay = new Date(italyDate);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    console.log("Start of Italian day:", startOfDay.toISOString());
+    console.log("End of Italian day:", endOfDay.toISOString());
 
     // ✅ Calculate Dare (Debts + Certain Payments)
     const dareResult = await pool.query(
@@ -926,7 +936,7 @@ app.get("/dailyPolicies", async (req, res) => {
               ELSE 0 
           END) AS total_avere
        FROM policy
-       WHERE created_at BETWEEN $1 AND $2 OR updated_at BETWEEN $1 AND $2`,  // Considering both created and updated today
+       WHERE created_at BETWEEN $1 AND $2 OR updated_at BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
     );    
 
@@ -949,14 +959,14 @@ app.get("/dailyPolicies", async (req, res) => {
     const avereTotal = avereResult.rows[0].total_avere || 0;
     const cassaTotal = avereTotal - dareTotal;
 
-    console.log("Cassa Total:", cassaTotal); // Log to check if the value is correct
+    console.log("Cassa Total:", cassaTotal);
 
-    // ✅ RENDER THE PAGE HERE
+    // ✅ Render the Page
     res.render("dailyPolicies", {
       policies: result.rows,
       dare: dareTotal,
-      avere: avereTotal,  // Now correctly includes Paid Premium for created today and Paid Debt for modified today
-      cassa: cassaTotal,  // The final value for cassa
+      avere: avereTotal,
+      cassa: cassaTotal,
       error: null,
     });
 
@@ -965,8 +975,6 @@ app.get("/dailyPolicies", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
-
-
 
 // Search daily policies
 app.post("/dailyPolicies", async (req, res) => {
