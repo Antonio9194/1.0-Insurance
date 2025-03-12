@@ -977,7 +977,6 @@ app.get("/dailyPolicies", async (req, res) => {
   }
 });
 
-
 // Search daily policies
 app.post("/dailyPolicies", async (req, res) => {
   const { policyName } = req.body; // Get the policy name from the form
@@ -988,44 +987,69 @@ app.post("/dailyPolicies", async (req, res) => {
       ? `AND policy.policy_number ILIKE '%${policyName}%'`
       : "";
 
-    // Calculate the sum of policies with payment method POS, Bonifico, Prelevati, Finanziamento
-    const dareResult = await pool.query(`
-        SELECT SUM(annual_premium) AS total_dare 
-        FROM policy 
-        WHERE payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
-        AND created_at >= CURRENT_DATE 
-        AND created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
-        ${policyFilter}  -- Add policy filter here
-    `);
-    const dare = dareResult.rows[0].total_dare || 0; // Default to 0 if no records found
+    // Define start and end of the day in Italian time (Europe/Rome)
+    const startOfDay = new Date();
+    startOfDay.setUTCHours(0, 0, 0, 0);
+    startOfDay.setHours(startOfDay.getHours() + 1); // Convert to Rome time
 
-    // Calculate the sum of policies with payment method Contanti, Assegno
-    const avereResult = await pool.query(`
-        SELECT SUM(annual_premium) AS total_avere 
-        FROM policy 
-        WHERE payment_method IN ('Contanti', 'Assegno') 
-        AND created_at >= CURRENT_DATE 
-        AND created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
-        ${policyFilter}  -- Add policy filter here
-    `);
+    const endOfDay = new Date();
+    endOfDay.setUTCHours(23, 59, 59, 999);
+    endOfDay.setHours(endOfDay.getHours() + 1); // Convert to Rome time
+
+    console.log("Fetching daily policies between:", startOfDay, "and", endOfDay);
+
+    // ✅ Calculate Dare (Certain Payment Methods)
+    const dareResult = await pool.query(
+      `SELECT 
+        SUM(CASE 
+          WHEN payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
+          THEN paid_premium ELSE 0 
+        END) + SUM(debt) AS total_dare 
+      FROM policy 
+      WHERE (created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+         OR updated_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)
+      ${policyFilter}`,
+      [startOfDay, endOfDay]
+    );
+
+    const dare = dareResult.rows[0].total_dare || 0;
+
+    // ✅ Calculate Avere (Paid Premium + Paid Debt)
+    const avereResult = await pool.query(
+      `SELECT 
+        SUM(CASE 
+          WHEN created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+          AND payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
+          THEN paid_premium 
+          WHEN updated_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+          THEN paid_debt
+          ELSE 0 
+        END) AS total_avere
+      FROM policy
+      WHERE (created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+         OR updated_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)
+      ${policyFilter}`,
+      [startOfDay, endOfDay]
+    );
+
     const avere = avereResult.rows[0].total_avere || 0;
-
-    // Calculate avere - dare
     const cassa = avere - dare;
 
-    // Retrieve daily policies along with client information
-const result = await pool.query(`
-    SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-    FROM policy 
-    LEFT JOIN client ON policy.client_id = client.id 
-    WHERE policy.created_at >= CURRENT_DATE 
-    AND policy.created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
-    ${policyFilter}  -- Add policy filter here
-    ORDER BY client.last_name
-`);
+    // ✅ Fetch Policies Created or Updated Today
+    const result = await pool.query(
+      `SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
+      FROM policy 
+      LEFT JOIN client ON policy.client_id = client.id 
+      WHERE (policy.created_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2 
+         OR policy.updated_at AT TIME ZONE 'Asia/Tokyo' AT TIME ZONE 'Europe/Rome' BETWEEN $1 AND $2)
+      ${policyFilter}
+      ORDER BY client.last_name`,
+      [startOfDay, endOfDay]
+    );
 
+    console.log("Policies Found:", result.rows.length);
 
-    // Render the daily policies view with the calculated dare value
+    // ✅ RENDER THE PAGE
     res.render("dailyPolicies", {
       policies: result.rows,
       dare: dare,
@@ -1033,11 +1057,13 @@ const result = await pool.query(`
       cassa: cassa,
       error: null,
     });
+
   } catch (error) {
     console.error("Error fetching daily policies:", error);
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 // Shows all the policies for a specific client
 app.get("/specificClientPolicies/:id", async (req, res) => {
