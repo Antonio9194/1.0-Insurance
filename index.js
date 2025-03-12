@@ -380,7 +380,6 @@ app.get("/dashboard", async (req, res) => {
   }
 });
 
-
 // Search clients
 app.get("/searchClients", async (req, res) => {
   const { q } = req.query;
@@ -895,8 +894,9 @@ app.post("/deletePolicies/:id", async (req, res) => {
 // Shows daily policies
 app.get("/dailyPolicies", async (req, res) => {
   try {
-    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
-    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
+    // Get start and end of today for filtering
+    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0)); // Start of today
+    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999)); // End of today
 
     console.log("Fetching daily policies between:", startOfDay, "and", endOfDay);
 
@@ -949,12 +949,14 @@ app.get("/dailyPolicies", async (req, res) => {
     const avereTotal = avereResult.rows[0].total_avere || 0;
     const cassaTotal = avereTotal - dareTotal;
 
+    console.log("Cassa Total:", cassaTotal); // Log to check if the value is correct
+
     // ✅ RENDER THE PAGE HERE
     res.render("dailyPolicies", {
       policies: result.rows,
       dare: dareTotal,
       avere: avereTotal,  // Now correctly includes Paid Premium for created today and Paid Debt for modified today
-      cassa: cassaTotal,
+      cassa: cassaTotal,  // The final value for cassa
       error: null,
     });
 
@@ -963,7 +965,6 @@ app.get("/dailyPolicies", async (req, res) => {
     res.status(500).send("Internal Server Error");
   }
 });
-
 
 
 
