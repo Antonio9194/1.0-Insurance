@@ -62,7 +62,7 @@
     <div class="col-md-3">
         <div class="alert alert-success text-center" role="alert" style="border-radius: 5px;">
             <h5 class="alert-heading">Avere</h5>
-            <p class="mb-0 fw-bold"><%= avere %> €</p>
+            <p class="mb-0 fw-bold"><%= (avere + dailyPaidDebt).toFixed(2) %> €</p>
         </div>
     </div>
     <div class="col-md-3">
@@ -96,8 +96,9 @@
                     <th class="text-center" style="width: 8%;">Premio Annuo</th>
                     <th class="text-center" style="width: 7%;">Stato</th>
                     <th class="text-center" style="width: 7%;">Frequenza</th>
-                    <th class="text-center" style="width: 7%;">Metodo</th>
-                    <th class="text-center" style="width: 7%;">Debito</th>
+                    <th class="text-center" style="width: 5%;">Metodo</th>
+                    <th class="text-center" style="width: 5%;">Pagato</th>
+                    <th class="text-center" style="width: 5%;">Debito</th>
                     <th class="text-center">Azioni</th>
                 </tr>
             </thead>
@@ -114,6 +115,7 @@
                         <td class="text-center" style="font-weight: bold;"><%= policy.status %></td>
                         <td class="text-center"><%= policy.payment_frequency %></td>
                         <td class="text-center"><%= policy.payment_method %></td>
+                        <td class="text-center" style="color: green; font-weight: bold;"><%= policy.paid_premium %> €</td>
                         <td class="text-center" style="color: red; font-weight: bold;"><%= policy.debt %> €</td>
                         <td class="text-center" style="width: 40%;"> <!-- Set to 50% or any desired width -->
                             <div class="btn-group btn-group-sm" role="group" aria-label="Actions" style="margin: 0; display: flex; flex-wrap: nowrap; gap: 0;">

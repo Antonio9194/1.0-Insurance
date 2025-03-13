@@ -333,13 +333,25 @@ app.get("/dashboard", async (req, res) => {
       [startOfDay, endOfDay]
     );
 
+    // Query for policies updated today based on updated_at
+    const updatedDebtPolicies = await pool.query(
+      "SELECT * FROM policy WHERE updated_at BETWEEN $1 AND $2",
+      [startOfDay, endOfDay]
+    ).then(res => res.rows);
+
     const todayPolicies = dailyPoliciesResult.rows;
 
-    const dailyPaidPremium = todayPolicies
-      .reduce((total, policy) => {
+    // Calculate the total sum of paid premium for today's policies
+    const dailyPaidPremium = parseFloat(
+      todayPolicies.reduce((total, policy) => {
         return total + (parseFloat(policy.paid_premium) || 0);
-      }, 0)
-      .toFixed(2); // Calculate the total sum of paid_premium for today's policies
+      }, 0).toFixed(2)
+    );
+
+      // Calculate the total sum of todays' paid debt
+      const dailyPaidDebt = updatedDebtPolicies.reduce((total, policy) => {
+        return total + (parseFloat(policy.paid_debt) || 0);
+      }, 0).toFixed(2);
 
     // Calculate the total sum of debt for today's policies
     const dailyDebt = todayPolicies
@@ -354,6 +366,7 @@ app.get("/dashboard", async (req, res) => {
       policies,
       todayPolicies,
       dailyPaidPremium,
+      dailyPaidDebt,
       dailyDebt,
       error: null,
     });
@@ -766,7 +779,6 @@ app.get("/editPolicies/:id", async (req, res) => {
 });
 
 
-// Edits a policy
 app.post("/editPolicies/:id", async (req, res) => {
   const { id } = req.params;
   const {
@@ -779,7 +791,7 @@ app.post("/editPolicies/:id", async (req, res) => {
     status,
     payment_frequency,
     payment_method,
-    debt,
+    debt, // New debt value
     notes,
     paid_premium,
     license_plate,
@@ -807,8 +819,33 @@ app.post("/editPolicies/:id", async (req, res) => {
   }
 
   try {
+    // Step 1: Retrieve the existing debt value
+    const oldDebtResult = await pool.query("SELECT debt, paid_debt FROM policy WHERE id = $1", [id]);
+
+    if (oldDebtResult.rows.length === 0) {
+      return res.status(404).send("Policy not found.");
+    }
+
+    const oldDebt = parseFloat(oldDebtResult.rows[0].debt);
+    const oldPaidDebt = parseFloat(oldDebtResult.rows[0].paid_debt);
+    const newDebt = parseFloat(debt);
+
+    // Step 2: Calculate the difference
+    const debtDifference = oldDebt - newDebt;
+
+    // If the debt is reduced, increase paid_debt
+    const updatedPaidDebt = oldPaidDebt + debtDifference;
+
+    // Step 3: Update the policy with the new debt and updated paid_debt
     const result = await pool.query(
-      "UPDATE policy SET policy_number = $1, client_id = $2, type = $3, start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), annual_premium = $6, status = $7, payment_frequency = $8, payment_method = $9, debt = $10, notes = $11, paid_premium = $12, license_plate = $13 WHERE id = $14 RETURNING *",
+      `UPDATE policy 
+       SET policy_number = $1, client_id = $2, type = $3, 
+           start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), 
+           annual_premium = $6, status = $7, payment_frequency = $8, 
+           payment_method = $9, debt = $10, notes = $11, 
+           paid_premium = $12, paid_debt = $13, license_plate = $14 
+       WHERE id = $15 
+       RETURNING *`,
       [
         policy_number,
         client_id,
@@ -819,20 +856,23 @@ app.post("/editPolicies/:id", async (req, res) => {
         status,
         payment_frequency,
         payment_method,
-        debt,
+        newDebt,
         notes,
         paid_premium,
+        updatedPaidDebt, // Store the adjusted paid_debt
         license_plate,
         id,
       ]
     );
+
     console.log("Edited policy:", result.rows[0]);
-    res.redirect(`/specificClientPolicies/${client_id}`); //
+    res.redirect(`/specificClientPolicies/${client_id}`);
   } catch (error) {
     console.error("Error editing policy:", error.message);
     res.status(500).send("Internal Server Error");
   }
 });
+
 
 // Deletes a policy
 app.post("/deletePolicies/:id", async (req, res) => {
@@ -850,6 +890,7 @@ app.post("/deletePolicies/:id", async (req, res) => {
   }
 });
 
+// Shows daily policies
 app.get("/dailyPolicies", async (req, res) => {
   try {
     const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
@@ -870,13 +911,28 @@ app.get("/dailyPolicies", async (req, res) => {
 
     const avereResult = await pool.query(
       `SELECT 
-        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END) AS total_avere 
+        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END) 
+        + SUM(debt)
+        + SUM(paid_debt) AS total_avere 
       FROM policy 
       WHERE created_at BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
     );
 
     console.log("Avere Result:", avereResult.rows);
+
+    // 🔹 Fetch only policies whose debt was updated today
+   // Fetch only policies where debt was updated today
+const updatedDebtResult = await pool.query(
+  `SELECT SUM(paid_debt) AS total_paid_debt 
+  FROM policy 
+  WHERE updated_at::DATE = CURRENT_DATE`
+);
+
+const dailyPaidDebt = parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0);
+
+
+    console.log("Daily Paid Debt:", dailyPaidDebt);
 
     const result = await pool.query(
       `SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
@@ -891,11 +947,15 @@ app.get("/dailyPolicies", async (req, res) => {
 
     res.render("dailyPolicies", {
       policies: result.rows,
-      dare: dareResult.rows[0].total_dare || 0,
-      avere: avereResult.rows[0].total_avere || 0,
-      cassa: (avereResult.rows[0].total_avere || 0) - (dareResult.rows[0].total_dare || 0),
+      dare: parseFloat(dareResult.rows[0].total_dare || 0),
+      avere: parseFloat(avereResult.rows[0].total_avere || 0),
+      dailyPaidDebt: parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0), // ✅ Ensure it's a number
+      cassa: (parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0) + 
+             parseFloat(avereResult.rows[0].total_avere || 0) - 
+             parseFloat(dareResult.rows[0].total_dare || 0)).toFixed(2), // ✅ Proper calculation
       error: null,
     });
+    
 
   } catch (error) {
     console.error("Error fetching daily policies:", error);

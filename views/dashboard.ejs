@@ -116,8 +116,8 @@
                     </div>
                     <div class="card-body">
                         <p class="card-text">
-                            <%= dailyPaidPremium %> €
-                        </p>
+                            <%= (parseFloat(dailyPaidPremium) + parseFloat(dailyPaidDebt)).toFixed(2) %> €
+                          </p>
                         <h6 class="text-muted">Incasso Giornaliero</h6>
                     </div>
                 </div>
