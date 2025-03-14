@@ -13,23 +13,34 @@
 
 <body>
     <!-- Navbar with search form -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
-        <a class="navbar-brand ml-2" href="/dashboard">
-            <h1 class="h4">Gestione Assicurazioni</h1>
-        </a>
-        <!-- Search bar that searches for clients (displaying name and codice fiscale) and for license plates  -->
-        <div class="collapse navbar-collapse justify-content-end">
-            <form id="searchForm" onsubmit="return false;" class="form-inline">
-                <input type="text" class="form-control mr-2" name="client" placeholder="Cerca Cliente" id="clientInput">
-                <input type="text" class="form-control mr-2" name="licensePlate" placeholder="Cerca Targa"
-                    id="licensePlateInput">
-                <div id="resultsDropdown" class="dropdown-menu" style="display: none; width: 300px;">
-                    <ul id="resultsList" class="list-unstyled"></ul>
-                </div>
-            </form>
-        </div>
-    </nav>
-
+<nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+    <a class="navbar-brand ml-2" href="/dashboard">
+        <h1 class="h4 d-inline">Gestione Assicurazioni</h1>
+    </a>
+    <a href="/clients" class="ml-3 text-light text-decoration-none" style="opacity: 0.8; transition: opacity 0.2s;">
+        Clienti
+    </a>
+    <a href="/policies" class="ml-3 text-light text-decoration-none" style="opacity: 0.8; transition: opacity 0.2s;">
+        Polizze
+    </a>
+    <a href="/dailyPolicies" class="ml-3 text-light text-decoration-none" style="opacity: 0.8; transition: opacity 0.2s;">
+        Cassa
+    </a>
+    <a href="/debiti" class="ml-3 text-light text-decoration-none" style="opacity: 0.8; transition: opacity 0.2s;">
+        Debiti
+    </a>
+    <!-- Search bar that searches for clients (displaying name and codice fiscale) and for license plates -->
+    <div class="collapse navbar-collapse justify-content-end">
+        <form id="searchForm" onsubmit="return false;" class="form-inline">
+            <input type="text" class="form-control mr-2" name="client" placeholder="Cerca Cliente" id="clientInput">
+            <input type="text" class="form-control mr-2" name="licensePlate" placeholder="Cerca Targa"
+                id="licensePlateInput">
+            <div id="resultsDropdown" class="dropdown-menu" style="display: none; width: 300px;">
+                <ul id="resultsList" class="list-unstyled"></ul>
+            </div>
+        </form>
+    </div>
+</nav>
 <body>
    <!-- Header -->
    <div style="margin-top: 30px; margin-left: 20px;">
