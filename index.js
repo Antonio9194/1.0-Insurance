@@ -349,9 +349,13 @@ app.get("/dashboard", async (req, res) => {
     );
 
       // Calculate the total sum of todays' paid debt
-      const dailyPaidDebt = updatedDebtPolicies.reduce((total, policy) => {
+      const dailyPaidDebt = parseFloat(updatedDebtPolicies.reduce((total, policy) => {
         return total + (parseFloat(policy.paid_debt) || 0);
-      }, 0).toFixed(2);
+      }, 0)).toFixed(2);
+      
+      const totalDailyIncome = (
+        parseFloat(dailyPaidPremium) + parseFloat(dailyPaidDebt)
+      ).toFixed(2);
 
     // Calculate the total sum of debt for today's policies
     const dailyDebt = todayPolicies
@@ -368,6 +372,7 @@ app.get("/dashboard", async (req, res) => {
       dailyPaidPremium,
       dailyPaidDebt,
       dailyDebt,
+      totalDailyIncome,
       error: null,
     });
   } catch (error) {
