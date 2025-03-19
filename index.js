@@ -14,6 +14,7 @@ const { Pool } = pg; // This is the correct import
 import dotenv from "dotenv";
 dotenv.config();
 import cron from "node-cron";
+import fs from 'fs';
 
 // Creating an instance of Express
 const app = express();
@@ -33,6 +34,10 @@ app.use(bodyParser.json()); // Parse JSON bodies
 app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(morgan("dev")); // HTTP request logger
 app.use(cookieParser()); // Parse cookies
+
+// Serve static files from 'uploads' directory
+app.use("/uploads", express.static("uploads"));
+
 
 // Serve static files from the 'uploads' directory
 app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
@@ -261,6 +266,29 @@ app.post("/uploadFile/:id", (req, res) => {
       });
     }
   });
+});
+
+// Route to delete a file
+app.delete("/deleteFiles/:id", async (req, res) => {
+  const policyId = req.params.id;
+
+  try {
+    const result = await pool.query(
+      `
+            DELETE FROM uploaded_files WHERE policy_id = $1
+        `,
+      [policyId]
+    );
+
+    if (result.rowCount > 0) {
+      res.status(200).json({ success: true, message: "File deleted successfully" });
+    } else {
+      res.status(404).json({ success: false, message: "File not found" });
+    }
+  } catch (err) {
+    console.error("Error deleting file:", err);
+    res.status(500).json({ success: false, message: "Error deleting file" });
+  }
 });
 
 // Route for file view

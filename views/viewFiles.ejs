@@ -59,11 +59,13 @@
                                     <% if (file.filename.match(/\.(jpg|jpeg|png|gif)$/)) { %>
                                         <img src="/uploads/<%= file.filename %>" class="img-fluid" alt="<%= file.filename %>" />
                                     <% } else if (file.filename.match(/\.pdf$/)) { %>
-                                        <embed src="/uploads/<%= file.filename %>" class="img-fluid" style="height: 400px; ;" />
+                                        <embed src="/uploads/<%= file.filename %>" class="img-fluid" style="height: 400px;" />
                                     <% } else { %>
                                         <p class="text-muted">No preview available for this file type.</p>
                                     <% } %>
                                 </div>
+                                <!-- Delete Button -->
+                                <button class="btn btn-danger mt-3" onclick="deleteFile('<%= file.policy_id %>')">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -82,6 +84,26 @@
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function deleteFile(policyId) {
+            if (confirm("Sei sicuro di voler eliminare questo file?")) {
+                fetch(`/deleteFiles/${policyId}`, {
+                    method: 'DELETE',
+                    headers: { 'Content-Type': 'application/json' }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        alert("File eliminato con successo!");
+                        location.reload(); // Reload the page to see the updated list
+                    } else {
+                        alert("Errore durante l'eliminazione del file: " + data.message);
+                    }
+                })
+                .catch(error => console.error('Error:', error));
+            }
+        }
+        </script>
     <script>
     // Set up the modal to display the image
     $('#imageModal').on('show.bs.modal', function (event) {
