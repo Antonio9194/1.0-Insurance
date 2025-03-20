@@ -65,7 +65,7 @@
                                     <% } %>
                                 </div>
                                 <!-- Delete Button -->
-                                <button class="btn btn-danger mt-3" onclick="deleteFile('<%= file.policy_id %>')">Delete</button>
+                                <button class="btn btn-danger mt-3" onclick="deleteFile('<%= file.id %>')">Delete</button>
                             </div>
                         </div>
                     </div>
@@ -85,9 +85,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
     <script>
-        function deleteFile(policyId) {
+        function deleteFile(fileId) {
             if (confirm("Sei sicuro di voler eliminare questo file?")) {
-                fetch(`/deleteFiles/${policyId}`, {
+                fetch(`/deleteFile/${fileId}`, {
                     method: 'DELETE',
                     headers: { 'Content-Type': 'application/json' }
                 })

@@ -268,16 +268,17 @@ app.post("/uploadFile/:id", (req, res) => {
   });
 });
 
-// Route to delete a file
-app.delete("/deleteFiles/:id", async (req, res) => {
-  const policyId = req.params.id;
+// Route to delete a specific file
+app.delete("/deleteFile/:id", async (req, res) => {
+  const fileId = req.params.id; // Get file ID from request parameters
 
   try {
+    // Delete the specific file by its ID
     const result = await pool.query(
       `
-            DELETE FROM uploaded_files WHERE policy_id = $1
+            DELETE FROM uploaded_files WHERE id = $1
         `,
-      [policyId]
+      [fileId]
     );
 
     if (result.rowCount > 0) {
@@ -290,6 +291,7 @@ app.delete("/deleteFiles/:id", async (req, res) => {
     res.status(500).json({ success: false, message: "Error deleting file" });
   }
 });
+
 
 // Route for file view
 app.get("/viewFiles/:id", async (req, res) => {
