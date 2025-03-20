@@ -16,6 +16,7 @@ dotenv.config();
 import cron from "node-cron";
 import fs from 'fs';
 
+const __dirname = path.dirname(new URL(import.meta.url).pathname);
 // Creating an instance of Express
 const app = express();
 
@@ -35,15 +36,11 @@ app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(morgan("dev")); // HTTP request logger
 app.use(cookieParser()); // Parse cookies
 
-// Serve static files from 'uploads' directory
-app.use("/uploads", express.static("uploads"));
-
-
 // Serve static files from the 'uploads' directory
-app.use("/uploads", express.static(path.join(process.cwd(), "uploads")));
+app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Use __dirname for better path resolution
 
 // Serve static files from the public directory
-app.use(express.static(path.join(process.cwd(), "public")));
+app.use(express.static(path.join(__dirname, "public"))); // Use __dirname here too
 
 // Set the view engine to EJS
 app.set("view engine", "ejs");
@@ -51,7 +48,7 @@ app.set("views", path.join(process.cwd(), "views"));
 
 // Set storage engine
 const storage = multer.diskStorage({
-  destination: "./uploads/", // Specify the upload directory
+  destination: path.join(__dirname, "uploads"), // Specify the upload directory
   filename: (req, file, cb) => {
     cb(
       null,
@@ -68,6 +65,7 @@ const upload = multer({
     checkFileType(file, cb);
   },
 }).single("file"); // Specify the field name for the file input
+
 
 // Check file type function
 function checkFileType(file, cb) {
