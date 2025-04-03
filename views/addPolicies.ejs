@@ -58,14 +58,14 @@
         <!-- Clients form -->
         <div class="form-group col-md-6">
             <label for="client-search">Cliente:</label>
-            <input 
-                type="text" 
-                id="client-search" 
-                class="form-control" 
-                placeholder="Search for a client..." 
+            <input
+                type="text"
+                id="client-search"
+                class="form-control"
+                placeholder="Search for a client..."
                 autocomplete="off"
                 oninput="searchClients(this.value)" <!-- Call a function to search for clients -->
-            
+
             <select id="client-dropdown" class="form-control" size="5" style="display: none;" onchange="selectClient(this)">
                 <!-- Options will be populated dynamically -->
             </select>
@@ -116,7 +116,7 @@
     <div class="form-row">
         <!-- Premio Annuo Field -->
         <div class="form-group col-md-6">
-            <label for="annual_premium">Premio Annuo (€):</label>
+            <label for="annual_premium">Premio (€):</label>
             <input type="number" class="form-control" id="annual_premium" name="annual_premium" required step="0.01" placeholder="0.00">
         </div>
 

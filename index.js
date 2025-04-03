@@ -101,7 +101,7 @@ async function sendReminderEmails() {
   try {
     const result = await pool.query(`
         SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name , client.email AS client_email
-        FROM policy 
+        FROM policy
         LEFT JOIN client ON policy.client_id = client.id
         WHERE end_date <= CURRENT_DATE + INTERVAL '14 days'
         AND end_date > CURRENT_DATE
@@ -127,16 +127,16 @@ async function sendReminderEmails() {
       const subject = `Scadenza Polizza`;
       const message = `
           Gentile ${policy.client_first_name} ${policy.client_last_name},
-  
-          Ci teniamo a ricordarle che la sua polizza ${policy.policy_number}, 
+
+          Ci teniamo a ricordarle che la sua polizza ${policy.policy_number},
           targata ${policy.license_plate}, è in scadenza giorno ${formattedDate}.
           La invitiamo a recarsi in assicurazione entro la data indicata.
-  
+
           Questa è una comunicazione automatica, si prega di non rispondere a questo messaggio.
-  
+
           Cordiali saluti
           Vinciguerra & Barbagallo SNC Assicurazioni
-  
+
           Via Concetto Marchesi, 7b, 95125 Catania CT, Italia
           Orari: Lunedì - Venerdì: 9:00 - 13:00, 15:30 - 18:30
           Telefono: +39 095 749 6781
@@ -168,8 +168,8 @@ async function sendReminderEmails() {
 app.get("/send-reminders", async (req, res) => {
   try {
     const result = await pool.query(`
-        SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name, client.email AS client_email 
-                FROM policy 
+        SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name, client.email AS client_email
+                FROM policy
                 LEFT JOIN client ON policy.client_id = client.id
                 WHERE end_date <= CURRENT_DATE + INTERVAL '14 days'
                 AND end_date > CURRENT_DATE
@@ -197,13 +197,13 @@ app.get("/send-reminders", async (req, res) => {
       const subject = `Scadenza Polizza`;
       const message = `
           Gentile ${clientName},
-  
-          Ci teniamo a ricordarle che la sua polizza ${policy.policy_number}, 
+
+          Ci teniamo a ricordarle che la sua polizza ${policy.policy_number},
           targata ${policy.license_plate}, è in scadenza giorno ${formattedDate}.
           La invitiamo a recarsi in assicurazione entro la data indicata.
 
           Questa è una comunicazione automatica, si prega di non rispondere a questo messaggio.
-  
+
           Cordiali saluti
           Vinciguerra & Barbagallo SNC Assicurazioni
 
@@ -244,8 +244,8 @@ app.post("/uploadFile/:id", (req, res) => {
 
       // Fetch updated policies after upload
       const policiesResult = await pool.query(`
-                SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-                FROM policy 
+                SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+                FROM policy
                 LEFT JOIN client ON policy.client_id = client.id
                 WHERE policy.status = 'attiva'
             `);
@@ -354,8 +354,8 @@ app.get("/dashboard", async (req, res) => {
     // Query for policies added today based on created_at
     const dailyPoliciesResult = await pool.query(
       `
-    SELECT * 
-    FROM policy 
+    SELECT *
+    FROM policy
     WHERE created_at BETWEEN $1 AND $2
 `,
       [startOfDay, endOfDay]
@@ -380,7 +380,7 @@ app.get("/dashboard", async (req, res) => {
       const dailyPaidDebt = parseFloat(updatedDebtPolicies.reduce((total, policy) => {
         return total + (parseFloat(policy.paid_debt) || 0);
       }, 0)).toFixed(2);
-      
+
       const totalDailyIncome = (
         parseFloat(dailyPaidPremium) + parseFloat(dailyPaidDebt)
       ).toFixed(2);
@@ -627,15 +627,15 @@ app.get("/specificClientInfo/:id", async (req, res) => {
   try {
     const result = await pool.query(
       `
-            SELECT 
-                client.id, 
-                client.first_name, 
-                client.last_name, 
-                client.date_of_birth, 
-                client.address, 
-                client.email, 
-                client.phone, 
-                client.codice_fiscale, 
+            SELECT
+                client.id,
+                client.first_name,
+                client.last_name,
+                client.date_of_birth,
+                client.address,
+                client.email,
+                client.phone,
+                client.codice_fiscale,
                 COALESCE(SUM(policy.debt), 0) AS total_debt,
                 client.notes
             FROM client
@@ -664,9 +664,9 @@ app.get("/specificClientInfo/:id", async (req, res) => {
 app.get("/policies", async (req, res) => {
   try {
     const result = await pool.query(`
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name, policy.notes 
-            FROM policy 
-            LEFT JOIN client ON policy.client_id = client.id 
+            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name, policy.notes
+            FROM policy
+            LEFT JOIN client ON policy.client_id = client.id
             ORDER BY client.last_name, client_first_name
         `);
     console.log("Policies retrieved:", result.rows);
@@ -689,10 +689,10 @@ app.post("/policies", async (req, res) => {
   try {
     const result = await pool.query(
       `
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-            FROM policy 
-            JOIN client ON policy.client_id = client.id 
-            WHERE policy_number ILIKE $1 
+            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+            FROM policy
+            JOIN client ON policy.client_id = client.id
+            WHERE policy_number ILIKE $1
             ORDER BY client.last_name
         `,
       [`%${policyName}%`]
@@ -745,9 +745,9 @@ app.post("/addPolicy", async (req, res) => {
   try {
     // Insert the new policy into the database
     const result = await pool.query(
-      `INSERT INTO policy 
-             (policy_number, client_id, type, license_plate, start_date, end_date, annual_premium, status, payment_frequency, payment_method, debt, notes, paid_premium) 
-             VALUES ($1, $2, $3, $4, TO_DATE($5, 'DD/MM/YYYY'), TO_DATE($6, 'DD/MM/YYYY'), $7, $8, $9, $10, $11, $12, $13) 
+      `INSERT INTO policy
+             (policy_number, client_id, type, license_plate, start_date, end_date, annual_premium, status, payment_frequency, payment_method, debt, notes, paid_premium)
+             VALUES ($1, $2, $3, $4, TO_DATE($5, 'DD/MM/YYYY'), TO_DATE($6, 'DD/MM/YYYY'), $7, $8, $9, $10, $11, $12, $13)
              RETURNING *`,
       [
         policy_number,
@@ -871,13 +871,13 @@ app.post("/editPolicies/:id", async (req, res) => {
 
     // Step 3: Update the policy with the new debt and updated paid_debt
     const result = await pool.query(
-      `UPDATE policy 
-       SET policy_number = $1, client_id = $2, type = $3, 
-           start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'), 
-           annual_premium = $6, status = $7, payment_frequency = $8, 
-           payment_method = $9, debt = $10, notes = $11, 
-           paid_premium = $12, paid_debt = $13, license_plate = $14 
-       WHERE id = $15 
+      `UPDATE policy
+       SET policy_number = $1, client_id = $2, type = $3,
+           start_date = TO_DATE($4, 'YYYY-MM-DD'), end_date = TO_DATE($5, 'YYYY-MM-DD'),
+           annual_premium = $6, status = $7, payment_frequency = $8,
+           payment_method = $9, debt = $10, notes = $11,
+           paid_premium = $12, paid_debt = $13, license_plate = $14
+       WHERE id = $15
        RETURNING *`,
       [
         policy_number,
@@ -932,10 +932,10 @@ app.get("/dailyPolicies", async (req, res) => {
     console.log("Fetching daily policies between:", startOfDay, "and", endOfDay);
 
     const dareResult = await pool.query(
-      `SELECT 
-        SUM(CASE WHEN payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END) 
-        + SUM(debt) AS total_dare 
-      FROM policy 
+      `SELECT
+        SUM(CASE WHEN payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END)
+        + SUM(debt) AS total_dare
+      FROM policy
       WHERE created_at BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
     );
@@ -943,11 +943,11 @@ app.get("/dailyPolicies", async (req, res) => {
     console.log("Dare Result:", dareResult.rows);
 
     const avereResult = await pool.query(
-      `SELECT 
-        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END) 
+      `SELECT
+        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END)
         + SUM(debt)
-        + SUM(paid_debt) AS total_avere 
-      FROM policy 
+        + SUM(paid_debt) AS total_avere
+      FROM policy
       WHERE created_at BETWEEN $1 AND $2`,
       [startOfDay, endOfDay]
     );
@@ -957,8 +957,8 @@ app.get("/dailyPolicies", async (req, res) => {
     // 🔹 Fetch only policies whose debt was updated today
    // Fetch only policies where debt was updated today
 const updatedDebtResult = await pool.query(
-  `SELECT SUM(paid_debt) AS total_paid_debt 
-  FROM policy 
+  `SELECT SUM(paid_debt) AS total_paid_debt
+  FROM policy
   WHERE updated_at::DATE = CURRENT_DATE`
 );
 
@@ -968,9 +968,9 @@ const dailyPaidDebt = parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0)
     console.log("Daily Paid Debt:", dailyPaidDebt);
 
     const result = await pool.query(
-      `SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-      FROM policy 
-      LEFT JOIN client ON policy.client_id = client.id 
+      `SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+      FROM policy
+      LEFT JOIN client ON policy.client_id = client.id
       WHERE policy.created_at BETWEEN $1 AND $2
       ORDER BY client.last_name`,
       [startOfDay, endOfDay]
@@ -983,12 +983,12 @@ const dailyPaidDebt = parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0)
       dare: parseFloat(dareResult.rows[0].total_dare || 0),
       avere: parseFloat(avereResult.rows[0].total_avere || 0),
       dailyPaidDebt: parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0), // ✅ Ensure it's a number
-      cassa: (parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0) + 
-             parseFloat(avereResult.rows[0].total_avere || 0) - 
+      cassa: (parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0) +
+             parseFloat(avereResult.rows[0].total_avere || 0) -
              parseFloat(dareResult.rows[0].total_dare || 0)).toFixed(2), // ✅ Proper calculation
       error: null,
     });
-    
+
 
   } catch (error) {
     console.error("Error fetching daily policies:", error);
@@ -997,7 +997,7 @@ const dailyPaidDebt = parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0)
 });
 
 
-// Search daily policies
+/// Search daily policies
 app.post("/dailyPolicies", async (req, res) => {
   const { policyName } = req.body; // Get the policy name from the form
 
@@ -1007,48 +1007,63 @@ app.post("/dailyPolicies", async (req, res) => {
       ? `AND policy.policy_number ILIKE '%${policyName}%'`
       : "";
 
-    // Calculate the sum of policies with payment method POS, Bonifico, Prelevati, Finanziamento
+    const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
+    const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
+
+    // Calculate Dare (sum of paid premium and debt)
     const dareResult = await pool.query(`
-        SELECT SUM(annual_premium) AS total_dare 
-        FROM policy 
-        WHERE payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') 
-        AND created_at >= CURRENT_DATE 
-        AND created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
-        ${policyFilter}  -- Add policy filter here
-    `);
-    const dare = dareResult.rows[0].total_dare || 0; // Default to 0 if no records found
+      SELECT
+        SUM(CASE WHEN payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END)
+        + SUM(debt) AS total_dare
+      FROM policy
+      WHERE created_at BETWEEN $1 AND $2
+      ${policyFilter}
+    `, [startOfDay, endOfDay]);
 
-    // Calculate the sum of policies with payment method Contanti, Assegno
+    const dare = parseFloat(dareResult.rows[0].total_dare || 0);
+
+    // Calculate Avere (sum of paid premium, debt, and paid debt)
     const avereResult = await pool.query(`
-        SELECT SUM(annual_premium) AS total_avere 
-        FROM policy 
-        WHERE payment_method IN ('Contanti', 'Assegno') 
-        AND created_at >= CURRENT_DATE 
-        AND created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
-        ${policyFilter}  -- Add policy filter here
+      SELECT
+        SUM(CASE WHEN payment_method IN ('Contanti', 'Assegno', 'POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END)
+        + SUM(debt)
+        + SUM(paid_debt) AS total_avere
+      FROM policy
+      WHERE created_at BETWEEN $1 AND $2
+      ${policyFilter}
+    `, [startOfDay, endOfDay]);
+
+    const avere = parseFloat(avereResult.rows[0].total_avere || 0);
+
+    // Fetch only policies where debt was updated today
+    const updatedDebtResult = await pool.query(`
+      SELECT SUM(paid_debt) AS total_paid_debt
+      FROM policy
+      WHERE updated_at::DATE = CURRENT_DATE
+      ${policyFilter}
     `);
-    const avere = avereResult.rows[0].total_avere || 0;
 
-    // Calculate avere - dare
-    const cassa = avere - dare;
+    const dailyPaidDebt = parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0);
 
-    // Retrieve daily policies along with client information
-const result = await pool.query(`
-    SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-    FROM policy 
-    LEFT JOIN client ON policy.client_id = client.id 
-    WHERE policy.created_at >= CURRENT_DATE 
-    AND policy.created_at < CURRENT_DATE + INTERVAL '1 day'  -- Ensure it's within today
-    ${policyFilter}  -- Add policy filter here
-    ORDER BY client.last_name
-`);
+    // Retrieve policies with client information
+    const result = await pool.query(`
+      SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+      FROM policy
+      LEFT JOIN client ON policy.client_id = client.id
+      WHERE policy.created_at BETWEEN $1 AND $2
+      ${policyFilter}
+      ORDER BY client.last_name
+    `, [startOfDay, endOfDay]);
 
+    // Calculate Cassa
+    const cassa = (dailyPaidDebt + avere - dare).toFixed(2);
 
-    // Render the daily policies view with the calculated dare value
+    // Render the daily policies view with the calculated values
     res.render("dailyPolicies", {
       policies: result.rows,
       dare: dare,
       avere: avere,
+      dailyPaidDebt: dailyPaidDebt,
       cassa: cassa,
       error: null,
     });
@@ -1058,16 +1073,17 @@ const result = await pool.query(`
   }
 });
 
+
 // Shows all the policies for a specific client
 app.get("/specificClientPolicies/:id", async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
       `
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-            FROM policy 
-            JOIN client ON policy.client_id = client.id 
-            WHERE policy.client_id = $1 
+            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+            FROM policy
+            JOIN client ON policy.client_id = client.id
+            WHERE policy.client_id = $1
             ORDER BY client.first_name, client_last_name
         `,
       [id]
@@ -1092,9 +1108,9 @@ app.get("/specificPolicy/:id", async (req, res) => {
   try {
     const result = await pool.query(
       `
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-            FROM policy 
-            JOIN client ON policy.client_id = client.id 
+            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+            FROM policy
+            JOIN client ON policy.client_id = client.id
             WHERE policy.id = $1
         `,
       [id]
@@ -1118,7 +1134,7 @@ app.get("/debiti", async (req, res) => {
   try {
     // Calculate sum of debt of all displayed policies
     const totalDebtResult = await pool.query(`
-            SELECT SUM(debt) AS total_debt  
+            SELECT SUM(debt) AS total_debt
             FROM policy
             WHERE debt > 0
         `);
@@ -1127,8 +1143,8 @@ app.get("/debiti", async (req, res) => {
     const totalDebt = totalDebtResult.rows[0].total_debt || 0; // Default to 0 if null
 
     const result = await pool.query(`
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-            FROM policy 
+            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+            FROM policy
             LEFT JOIN client ON policy.client_id = client.id
             WHERE policy.debt > 0
             ORDER BY client.last_name, client_first_name
@@ -1161,9 +1177,9 @@ app.post("/debiti", async (req, res) => {
     // Query for filtered policies
     const result = await pool.query(
       `
-            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name 
-            FROM policy 
-            LEFT JOIN client ON policy.client_id = client.id 
+            SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name
+            FROM policy
+            LEFT JOIN client ON policy.client_id = client.id
             WHERE policy.debt > 0 AND policy.start_date >= $1
             ORDER BY client.last_name
         `,
@@ -1173,7 +1189,7 @@ app.post("/debiti", async (req, res) => {
     // Query for the total debt with the same filtering
     const totalDebtResult = await pool.query(
       `
-            SELECT SUM(debt) AS total_debt  
+            SELECT SUM(debt) AS total_debt
             FROM policy
             WHERE debt > 0 AND start_date >= $1
         `,

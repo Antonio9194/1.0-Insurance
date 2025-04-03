@@ -47,7 +47,7 @@
         <h6 class="text-muted">Polizze registrate in data odierna</h6>
     </div>
 
-    
+
     <div class="d-flex justify-content-between" style="margin-top: 20px; margin-right: 20px;">
         <!-- Search bar for policies based on policy name-->
         <form class="col-md-3" action="/dailyPolicies" method="POST">
@@ -58,7 +58,7 @@
                 </div>
             </div>
         </form>
-    
+
         <!-- Go back button -->
         <a href="javascript:history.back()" class="btn btn-outline-dark bi bi-arrow-left-circle"> Indietro</a>
     </div>
@@ -83,11 +83,11 @@
             <p class="mb-0 fw-bold"><%= cassa %> €</p>
         </div>
     </div>
-    
+
 </div>
 
     <!-- Function to format date -->
-    <% 
+    <%
     function formatDate(dateString) {
         const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
         return new Date(dateString).toLocaleDateString('en-GB', options);
@@ -105,7 +105,7 @@
                     <th class="text-center" style="width: 8%;">Targa</th>
                     <th class="text-center" style="width: 8%;">Data Inizio</th>
                     <th class="text-center" style="width: 8%;">Data Fine</th>
-                    <th class="text-center" style="width: 8%;">Premio Annuo</th>
+                    <th class="text-center" style="width: 7%;">Premio</th>
                     <th class="text-center" style="width: 7%;">Stato</th>
                     <th class="text-center" style="width: 7%;">Frequenza</th>
                     <th class="text-center" style="width: 5%;">Metodo</th>
@@ -135,7 +135,7 @@
                                     data-toggle="tooltip" title="Modifica Polizza"></a>
                                 <button onclick="showNotes(<%= policy.id %>)" class="btn bi bi-journal-text btn-outline-primary btn-sm" style="margin: 0;"
                                     data-toggle="tooltip" title="Note Polizza"></button>
-                                    
+
                                     <a href="/viewFiles/<%= policy.id %>" class="btn bi bi-folder2-open btn-outline-primary btn-sm" style="margin: 0;"
                                         data-toggle="tooltip" title="Vedi File"></a>
                                 <a href="/specificClientInfo/<%= policy.client_id %>" class="btn bi bi-info-circle btn-outline-primary btn-sm" style="margin: 0;"
@@ -160,7 +160,7 @@
     $('[data-toggle="tooltip"]').tooltip();
 });
 
-    </script>  
+    </script>
     <script>
      async function showNotes(policyId) {
     try {
@@ -187,7 +187,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             const searchForm = document.querySelector('form[action="/dailyPolicies"]');
             const searchInput = searchForm.querySelector('input[name="policyName"]');
-    
+
             searchForm.addEventListener("submit", (event) => {
                 // Prevent form submission if the search input is empty
                 if (!searchInput.value.trim()) {
@@ -197,7 +197,7 @@
             });
         });
     </script>
-    
+
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const clientInput = document.getElementById('clientInput');
