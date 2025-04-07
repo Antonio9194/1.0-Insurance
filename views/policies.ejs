@@ -43,12 +43,12 @@
 </nav>
     <!-- Header -->
     <div style="margin-top: 30px; margin-left: 20px;">
-        <h4>Lista Polizze</h4> 
+        <h4>Lista Polizze</h4>
         <h6 class="text-muted">Lista polizze registrate</h6>
     </div>
 
     <!-- Add Client Button -->
-    <a href="/addPolicies" class="btn btn-outline-dark bi bi-file-plus" 
+    <a href="/addPolicies" class="btn btn-outline-dark bi bi-file-plus"
     style="margin-top: 30px; margin-left: 20px;"> Aggiungi Nuova Polizza</a>
 
     <div class="d-flex justify-content-between" style="margin-top: 20px; margin-right: 20px;">
@@ -61,13 +61,13 @@
                 </div>
             </div>
         </form>
-    
+
         <!-- Go back button -->
         <a href="javascript:history.back()" class="btn btn-outline-dark bi bi-arrow-left-circle"> Indietro</a>
     </div>
 
         <!--Function to format date-->
-        <% 
+        <%
         function formatDate(dateString) {
             const options = { day: '2-digit', month: '2-digit', year: 'numeric' };
             return new Date(dateString).toLocaleDateString('en-GB', options);
@@ -131,8 +131,8 @@
                 <% }) %>
             </tbody>
         </table>
-        
-       
+
+
     </div>
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.16.1/umd/popper.min.js"></script>
@@ -141,7 +141,7 @@
         document.addEventListener("DOMContentLoaded", () => {
             const searchForm = document.querySelector('form[action="/policies"]');
             const searchInput = searchForm.querySelector('input[name="policyName"]');
-    
+
             searchForm.addEventListener("submit", (event) => {
                 // Prevent form submission if the search input is empty
                 if (!searchInput.value.trim()) {
@@ -156,7 +156,7 @@
     $('[data-toggle="tooltip"]').tooltip();
 });
 
-    </script>  
+    </script>
     <script>
      async function showNotes(policyId) {
     try {
