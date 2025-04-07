@@ -931,6 +931,15 @@ app.get("/dailyPolicies", async (req, res) => {
 
     console.log("Fetching daily policies between:", startOfDay, "and", endOfDay);
 
+    const annPremium = await pool.query(
+      `SELECT
+         SUM(annual_premium) AS total_annual_premium
+       FROM policy
+       WHERE created_at BETWEEN $1 AND $2`,
+      [startOfDay, endOfDay]
+    );
+
+
     const dareResult = await pool.query(
       `SELECT
         SUM(CASE WHEN payment_method IN ('POS', 'Bonifico', 'Prelevati', 'Finanziamento', 'Debito') THEN paid_premium ELSE 0 END)
@@ -980,6 +989,7 @@ const dailyPaidDebt = parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0)
 
     res.render("dailyPolicies", {
       policies: result.rows,
+      annualPremium: parseFloat(annPremium.rows[0].total_annual_premium || 0),
       dare: parseFloat(dareResult.rows[0].total_dare || 0),
       avere: parseFloat(avereResult.rows[0].total_avere || 0),
       dailyPaidDebt: parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0), // ✅ Ensure it's a number
@@ -1022,6 +1032,15 @@ app.post("/dailyPolicies", async (req, res) => {
 
     const dare = parseFloat(dareResult.rows[0].total_dare || 0);
 
+    const annPremium = await pool.query(`
+      SELECT SUM(annual_premium) AS total_annual_premium
+      FROM policy
+      WHERE created_at BETWEEN $1 AND $2
+      ${policyFilter}
+    `, [startOfDay, endOfDay]);
+
+    const annualPremium = parseFloat(annPremium.rows[0].total_annual_premium || 0);
+
     // Calculate Avere (sum of paid premium, debt, and paid debt)
     const avereResult = await pool.query(`
       SELECT
@@ -1061,6 +1080,7 @@ app.post("/dailyPolicies", async (req, res) => {
     // Render the daily policies view with the calculated values
     res.render("dailyPolicies", {
       policies: result.rows,
+      annualPremium,
       dare: dare,
       avere: avere,
       dailyPaidDebt: dailyPaidDebt,
