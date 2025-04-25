@@ -15,6 +15,8 @@ import dotenv from "dotenv";
 dotenv.config();
 import cron from "node-cron";
 import fs from 'fs';
+import session from 'express-session';
+
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname);
 // Creating an instance of Express
@@ -35,6 +37,19 @@ app.use(bodyParser.json()); // Parse JSON bodies
 app.use(bodyParser.urlencoded({ extended: true })); // Parse URL-encoded bodies
 app.use(morgan("dev")); // HTTP request logger
 app.use(cookieParser()); // Parse cookies
+app.use(session({
+  secret: 'YourSuperSecretKey', // move to .env later
+  resave: false,
+  saveUninitialized: true,
+  cookie: { secure: false }
+}));
+
+function isAuthenticated(req, res, next) {
+  if (req.session && req.session.authenticated) {
+    return next();
+  }
+  return res.redirect('/');
+}
 
 // Serve static files from the 'uploads' directory
 app.use("/uploads", express.static(path.join(__dirname, "uploads"))); // Use __dirname for better path resolution
@@ -227,7 +242,7 @@ app.get("/send-reminders", async (req, res) => {
 });
 
 // File upload route
-app.post("/uploadFile/:id", (req, res) => {
+app.post("/uploadFile/:id", isAuthenticated, (req, res) => {
   upload(req, res, async (err) => {
     if (err) {
       return res.render("policies", { msg: err, policies: [] });
@@ -267,7 +282,7 @@ app.post("/uploadFile/:id", (req, res) => {
 });
 
 // Route to delete a specific file
-app.delete("/deleteFile/:id", async (req, res) => {
+app.delete("/deleteFile/:id", isAuthenticated, async (req, res) => {
   const fileId = req.params.id; // Get file ID from request parameters
 
   try {
@@ -292,7 +307,7 @@ app.delete("/deleteFile/:id", async (req, res) => {
 
 
 // Route for file view
-app.get("/viewFiles/:id", async (req, res) => {
+app.get("/viewFiles/:id", isAuthenticated, async (req, res) => {
   const policyId = req.params.id;
 
   try {
@@ -323,23 +338,22 @@ app.get("/", (req, res) => {
   res.render("login");
 });
 
-//Login
+// POST login form submission
 app.post("/", (req, res) => {
   const { password } = req.body;
-
-  // Hardcoded password
   const PASSWORD = "viba0139";
 
-  // Check if the entered password matches the hardcoded password
   if (password === PASSWORD) {
-    res.redirect("/dashboard"); // Redirect to dashboard if correct
+    req.session.authenticated = true; // Store session data
+    res.redirect("/dashboard"); // Redirect to dashboard
   } else {
     res.send("Invalid password!"); // Show error if incorrect
   }
 });
 
+
 //Dashboard
-app.get("/dashboard", async (req, res) => {
+app.get("/dashboard", isAuthenticated, async (req, res) => {
   try {
     const clientsResult = await pool.query("SELECT * FROM client"); // Fetch all clients
     const clients = clientsResult.rows; // Get the rows from the result
@@ -410,7 +424,7 @@ app.get("/dashboard", async (req, res) => {
 });
 
 // Search clients
-app.get("/searchClients", async (req, res) => {
+app.get("/searchClients", isAuthenticated, async (req, res) => {
   const { q } = req.query;
   try {
     const result = await pool.query(
@@ -425,7 +439,7 @@ app.get("/searchClients", async (req, res) => {
 });
 
 // Search license plate
-app.get("/searchLicensePlate", async (req, res) => {
+app.get("/searchLicensePlate", isAuthenticated, async (req, res) => {
   const { q } = req.query;
   try {
     const result = await pool.query(
@@ -440,7 +454,7 @@ app.get("/searchLicensePlate", async (req, res) => {
 });
 
 // Shows all clients
-app.get("/clients", async (req, res) => {
+app.get("/clients", isAuthenticated, async (req, res) => {
   try {
     //query also for debt from all the client's policies
     const result = await pool.query(`
@@ -464,7 +478,7 @@ app.get("/clients", async (req, res) => {
 });
 
 //Adds a new client
-app.post("/addClient", async (req, res) => {
+app.post("/addClient", isAuthenticated, async (req, res) => {
   const {
     first_name,
     last_name,
@@ -498,7 +512,7 @@ app.post("/addClient", async (req, res) => {
 });
 
 //Shows add client form
-app.get("/addClient", async (req, res) => {
+app.get("/addClient", isAuthenticated, async (req, res) => {
   try {
     res.render("addClient");
   } catch (error) {
@@ -508,7 +522,7 @@ app.get("/addClient", async (req, res) => {
 });
 
 // Fetch notes for a specific policy
-app.get("/policyNotes/:id", async (req, res) => {
+app.get("/policyNotes/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params; // This should be the policy ID
   try {
     const result = await pool.query(
@@ -530,7 +544,7 @@ app.get("/policyNotes/:id", async (req, res) => {
 });
 
 // Fetch notes for a specific client
-app.get("/clientNotes/:id", async (req, res) => {
+app.get("/clientNotes/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params; // This should be the client ID
   try {
     const result = await pool.query(
@@ -552,7 +566,7 @@ app.get("/clientNotes/:id", async (req, res) => {
 });
 
 // Shows edit client form
-app.get("/editClient/:id", async (req, res) => {
+app.get("/editClient/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query("SELECT * FROM client WHERE id = $1", [id]);
@@ -565,7 +579,7 @@ app.get("/editClient/:id", async (req, res) => {
 });
 
 // Edits a client
-app.post("/editClient/:id", async (req, res) => {
+app.post("/editClient/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   console.log(req.body); // Log the entire request body to check the data sent
   const {
@@ -603,7 +617,7 @@ app.post("/editClient/:id", async (req, res) => {
 });
 
 // Deletes a client
-app.post("/deleteClient/:id", async (req, res) => {
+app.post("/deleteClient/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
@@ -621,7 +635,7 @@ app.post("/deleteClient/:id", async (req, res) => {
 });
 
 // Shows the info of a specific client
-app.get("/specificClientInfo/:id", async (req, res) => {
+app.get("/specificClientInfo/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
 
   try {
@@ -661,7 +675,7 @@ app.get("/specificClientInfo/:id", async (req, res) => {
 });
 
 // Shows all policies
-app.get("/policies", async (req, res) => {
+app.get("/policies", isAuthenticated, async (req, res) => {
   try {
     const result = await pool.query(`
             SELECT policy.*, client.first_name AS client_first_name, client.last_name AS client_last_name, policy.notes
@@ -709,7 +723,7 @@ app.post("/policies", async (req, res) => {
 });
 
 // Adds a new policy
-app.post("/addPolicy", async (req, res) => {
+app.post("/addPolicy", isAuthenticated, async (req, res) => {
   const {
     policy_number,
     client_id,
@@ -777,7 +791,7 @@ app.post("/addPolicy", async (req, res) => {
 });
 
 // Show add policy form
-app.get("/addPolicies", async (req, res) => {
+app.get("/addPolicies", isAuthenticated, async (req, res) => {
   try {
     res.render("addPolicies");
   } catch (error) {
@@ -787,7 +801,7 @@ app.get("/addPolicies", async (req, res) => {
 });
 
 // Shows edit policies form
-app.get("/editPolicies/:id", async (req, res) => {
+app.get("/editPolicies/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   try {
     // Query to get policy details and join with the client to get first and last name
@@ -812,7 +826,7 @@ app.get("/editPolicies/:id", async (req, res) => {
 });
 
 
-app.post("/editPolicies/:id", async (req, res) => {
+app.post("/editPolicies/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   const {
     policy_number,
@@ -908,7 +922,7 @@ app.post("/editPolicies/:id", async (req, res) => {
 
 
 // Deletes a policy
-app.post("/deletePolicies/:id", async (req, res) => {
+app.post("/deletePolicies/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
@@ -924,7 +938,7 @@ app.post("/deletePolicies/:id", async (req, res) => {
 });
 
 // Shows daily policies
-app.get("/dailyPolicies", async (req, res) => {
+app.get("/dailyPolicies", isAuthenticated, async (req, res) => {
   try {
     const startOfDay = new Date(new Date().setHours(0, 0, 0, 0));
     const endOfDay = new Date(new Date().setHours(23, 59, 59, 999));
@@ -1008,7 +1022,7 @@ const dailyPaidDebt = parseFloat(updatedDebtResult.rows[0].total_paid_debt || 0)
 
 
 /// Search daily policies
-app.post("/dailyPolicies", async (req, res) => {
+app.post("/dailyPolicies", isAuthenticated, async (req, res) => {
   const { policyName } = req.body; // Get the policy name from the form
 
   try {
@@ -1095,7 +1109,7 @@ app.post("/dailyPolicies", async (req, res) => {
 
 
 // Shows all the policies for a specific client
-app.get("/specificClientPolicies/:id", async (req, res) => {
+app.get("/specificClientPolicies/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
@@ -1123,7 +1137,7 @@ app.get("/specificClientPolicies/:id", async (req, res) => {
 });
 
 // Shows specific policy info
-app.get("/specificPolicy/:id", async (req, res) => {
+app.get("/specificPolicy/:id", isAuthenticated, async (req, res) => {
   const { id } = req.params;
   try {
     const result = await pool.query(
@@ -1150,7 +1164,7 @@ app.get("/specificPolicy/:id", async (req, res) => {
 });
 
 // Shows debiti
-app.get("/debiti", async (req, res) => {
+app.get("/debiti", isAuthenticated, async (req, res) => {
   try {
     // Calculate sum of debt of all displayed policies
     const totalDebtResult = await pool.query(`
@@ -1186,7 +1200,7 @@ app.get("/debiti", async (req, res) => {
 });
 
 //Month search bar
-app.post("/debiti", async (req, res) => {
+app.post("/debiti", isAuthenticated, async (req, res) => {
   const { timePeriod } = req.body; // Get the selected time period from the form input
   try {
     // Calculate the date range based on the selected time period
